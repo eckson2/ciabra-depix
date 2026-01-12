@@ -179,12 +179,18 @@ async function fetchFromFastDePix(invoiceId) {
             pix_url: tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`
         };
     } else {
-        // If 404 or other error, return null or throw
         if (response.status === 404) return null;
         try {
             const err = await response.json();
+            // Critical Fix: FastDePix returns 400/500 with this message for Not Found
+            if (err && err.message === 'Endpoint não encontrado') return null;
+
+            console.error('[FASTDEPIX] GET Error:', err);
             throw new Error(err.message || `FastDePix Error ${response.status}`);
-        } catch (e) { throw new Error(`FastDePix Error ${response.status}`); }
+        } catch (e) {
+            if (e.message === 'Endpoint não encontrado') return null;
+            throw new Error(`FastDePix Error ${response.status}`);
+        }
     }
 }
 
