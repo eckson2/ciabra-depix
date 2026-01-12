@@ -246,7 +246,32 @@
             }
         }
 
-        // ... existing startStatusPolling ...
+        // Poll for payment status
+        function startStatusPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(async () => {
+                try {
+                    const timestamp = new Date().getTime();
+                    const response = await fetch(`/api/invoices/${invoiceId}?t=${timestamp}`);
+                    if (response.ok) {
+                        const invoice = await response.json();
+
+                        // DEBUG: Update status on screen check
+                        if (invoice.status) {
+                            const debugEl = document.getElementById('debugStatus');
+                            if (debugEl) debugEl.textContent = invoice.status + ' (v1.6 checking)';
+                        }
+
+                        if (isPaid(invoice)) {
+                            clearInterval(pollingInterval);
+                            showConfirmedState(invoice);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro no polling:", e);
+                }
+            }, 3000);
+        }
 
         // ... existing showConfirmedState ...
 
