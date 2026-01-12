@@ -28,7 +28,7 @@ function loadConfig() {
     } catch (e) {
         console.error("Erro ao ler config:", e);
     }
-    return { gateway: 'ciabra' }; // Default
+    return { gateway: 'fastdepix' }; // Default is now FastDePix
 }
 
 function saveConfig(config) {
@@ -125,21 +125,52 @@ app.post('/api/invoices', async (req, res) => {
     try {
         if (gateway === 'fastdepix') {
             // --- FASTDEPIX IMPLEMENTATION ---
-            // Bypass 500 BRL limit by always sending user data
+            // Bypass 500 BRL limit strategy:
+            // 1. Create User via API to get an ID (Authenticated User)
+            // 2. Create Transaction with that user_id
+
             const randomUser = generateRandomUser();
+            let fastDePixUserId = null;
+
+            console.log(`[FASTDEPIX] Attempting to create user: ${randomUser.name}`);
+
+            try {
+                // Try /users endpoint (Common standard)
+                const userRes = await fetch(`${FASTDEPIX_API}/users`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(randomUser)
+                });
+
+                if (userRes.ok) {
+                    const uData = await userRes.json();
+                    fastDePixUserId = (uData.data || uData).id;
+                    console.log(`[FASTDEPIX] User Created! ID: ${fastDePixUserId}`);
+                } else {
+                    console.warn(`[FASTDEPIX] Create User failed (${userRes.status}). Trying fallback...`);
+                }
+            } catch (e) {
+                console.error(`[FASTDEPIX] User creation error: ${e.message}`);
+            }
 
             const payload = {
                 amount: body.price,
-                custom_page_id: null,
-                user: {
+                custom_page_id: null
+            };
+
+            if (fastDePixUserId) {
+                payload.user_id = fastDePixUserId; // Authenticated flow
+            } else {
+                // Fallback: Embed user data (Anonymous flow)
+                payload.user = {
                     name: randomUser.name,
                     cpf_cnpj: randomUser.cpf_cnpj,
                     email: randomUser.email,
-                    user_type: "individual" // Required by some APIs
-                }
-            };
+                    user_type: "individual"
+                };
+            }
 
-            console.log(`[FASTDEPIX] Sending Payload with Generated User:`, JSON.stringify(payload.user));
+            console.log(`[FASTDEPIX] Sending Transaction Payload (User ID: ${fastDePixUserId || 'Embedded'})`);
 
             const response = await fetch(`${FASTDEPIX_API}/transactions`, {
                 method: 'POST',
