@@ -50,9 +50,15 @@ app.post('/api/settings', (req, res) => {
     if (!['ciabra', 'fastdepix'].includes(gateway)) {
         return res.status(400).json({ error: 'Gateway inválido' });
     }
-    saveConfig({ gateway });
-    console.log(`[SETTINGS] Gateway alterado para: ${gateway}`);
-    res.json({ success: true, gateway });
+
+    try {
+        saveConfig({ gateway });
+        console.log(`[SETTINGS] Gateway alterado para: ${gateway}`);
+        res.json({ success: true, gateway });
+    } catch (e) {
+        console.error("[SETTINGS] Erro ao salvar config:", e);
+        res.status(500).json({ error: `Erro ao salvar: ${e.message}` });
+    }
 });
 
 // Proxy para criar cliente
