@@ -487,16 +487,25 @@
         async function setGateway(gateway) {
             document.getElementById('gw-status').innerText = 'Salvando...';
             try {
-                const res = await fetch('/api/settings', {
+                const res = await fetch('/api/settings?t=' + Date.now(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ gateway })
                 });
-                const data = await res.json();
-                updateUI(data.gateway);
+
+                const text = await res.text();
+                try {
+                    const data = JSON.parse(text);
+                    if (!res.ok) throw new Error(data.error || 'Erro no servidor');
+                    updateUI(data.gateway);
+                } catch (e) {
+                    console.error("Parse Error:", e);
+                    console.log("Response Body:", text);
+                    alert(`Erro (${res.status}): ${text.substring(0, 100)}...`);
+                }
             } catch (error) {
                 console.error(error);
-                alert('Erro: ' + error.message);
+                alert('Erro de Conexão: ' + error.message);
             }
         }
 
@@ -504,7 +513,7 @@
             currentGateway = gateway;
             document.getElementById('btn-ciabra').classList.remove('active');
             document.getElementById('btn-fastdepix').classList.remove('active');
-            
+
             document.getElementById(`btn-${gateway}`).classList.add('active');
             document.getElementById('gw-status').innerText = `Gateway Ativo: ${gateway.toUpperCase()}`;
         }
@@ -537,12 +546,12 @@
 
             // 2. Generate PDF
             const element = document.getElementById('pdf-template');
-            
+
             // Temporarily show it (or clone) so it renders? 
             // html2pdf handles hidden elements if we pass it directly, but style display:none might block layout.
             // Better to display block, capture, then hide. But that flickers.
             // Actually, html2pdf needs it rendered.
-            
+
             element.style.display = 'block';
 
             const opt = {
