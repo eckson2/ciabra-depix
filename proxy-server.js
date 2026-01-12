@@ -163,6 +163,7 @@ app.get('/api/invoices/:id', async (req, res) => {
     const config = loadConfig();
     const gateway = config.gateway;
     const invoiceId = req.params.id;
+    console.log(`[PROXY] GET INVOICE ENTRY: ID=${invoiceId} Gateway=${gateway}`);
 
     try {
         // We could store gateway in transaction ID (e.g. "FD-...") or just query current.
