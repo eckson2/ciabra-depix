@@ -175,28 +175,42 @@ app.get('/api/invoices/:id', async (req, res) => {
 
         if (gateway === 'fastdepix') {
             // Fetch from FastDePix
-            const response = await fetch(`${FASTDEPIX_API}/transactions/${invoiceId}`, {
+            const url = `${FASTDEPIX_API}/transactions/${invoiceId}`;
+            console.log(`[PROXY] Fetching FastDePix: ${url}`);
+
+            const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}` }
             });
-            const json = await response.json();
+            responseStatus = response.status;
 
             if (response.ok) {
+                const json = await response.json();
                 const tx = json.data || json;
-                // Normalize to Ciabra-ish structure for frontend?
-                // Frontend needs: status ('PAID'?), pix details (if pending)
+
+                // Normalization for Success.html (CamelCase pixCode is required!)
                 data = {
                     id: tx.id,
                     status: tx.status === 'PAID' ? 'PAID' : 'PENDING',
                     price: tx.amount,
-                    // Add Pix Copy Paste if needed
+                    // Both snake and camelCase to be safe
                     pix_code: tx.qr_code_text,
+                    pixCode: tx.qr_code_text,
+                    qrCode: tx.qr_code_text,
                     pix_url: tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`
                 };
-                responseStatus = 200;
+            } else {
+                try {
+                    const errJson = await response.json();
+                    console.error('[FASTDEPIX] GET Error:', errJson);
+                    data = { error: errJson }; // Pass upstream error
+                } catch (e) {
+                    data = { error: "Upstream error" };
+                }
             }
 
         } else {
-            // Fetch from Ciabra
+            // Fetch from Ciabra (Existing logic)
+            // ...
             const response = await fetch(`${CIABRA_API}/invoices/applications/invoices/${invoiceId}`, {
                 method: 'GET',
                 headers: {
