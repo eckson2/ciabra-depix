@@ -168,6 +168,7 @@ async function fetchFromFastDePix(invoiceId) {
     if (response.ok) {
         const json = await response.json();
         const tx = json.data || json;
+        console.log(`[FASTDEPIX] Success Response:`, JSON.stringify(tx, null, 2));
         return {
             id: tx.id,
             gateway: 'fastdepix',
