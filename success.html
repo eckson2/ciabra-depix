@@ -170,7 +170,7 @@
             const rawUpper = rawJson.toUpperCase();
 
             // 1. Scanner de Termos de Sucesso (Busca o valor bruto em qualquer lugar)
-            const paidValues = ['"PAID"', '"PAGO"', '"RECEIVED"', '"RECEBIDO"', '"CONFIRMED"', '"SUCCESS"', '"CONCLUIDO"', '"SETTLED"'];
+            const paidValues = ['"PAID"', '"PAGO"', '"RECEIVED"', '"RECEBIDO"', '"CONFIRMED"', '"SUCCESS"', '"CONCLUIDO"', '"SETTLED"', '"APPROVED"', '"COMPLETED"', '"FINISHED"'];
             if (paidValues.some(val => rawUpper.includes(val))) {
                 return true;
             }
