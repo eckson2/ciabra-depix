@@ -159,75 +159,89 @@ app.post('/api/invoices', async (req, res) => {
 });
 
 // Proxy para detalhes da cobrança (Híbrido)
+// Helper to fetch from FastDePix
+async function fetchFromFastDePix(invoiceId) {
+    const url = `${FASTDEPIX_API}/transactions/${invoiceId}`;
+    console.log(`[PROXY] Fetching FastDePix: ${url}`);
+    const response = await fetch(url, { headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}` } });
+
+    if (response.ok) {
+        const json = await response.json();
+        const tx = json.data || json;
+        return {
+            id: tx.id,
+            gateway: 'fastdepix',
+            status: tx.status === 'PAID' ? 'PAID' : 'PENDING',
+            price: tx.amount,
+            pix_code: tx.qr_code_text,
+            pixCode: tx.qr_code_text,
+            qrCode: tx.qr_code_text,
+            pix_url: tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`
+        };
+    } else {
+        // If 404 or other error, return null or throw
+        if (response.status === 404) return null;
+        try {
+            const err = await response.json();
+            throw new Error(err.message || `FastDePix Error ${response.status}`);
+        } catch (e) { throw new Error(`FastDePix Error ${response.status}`); }
+    }
+}
+
+// Helper to fetch from Ciabra
+async function fetchFromCiabra(invoiceId) {
+    console.log(`[PROXY] Fetching Ciabra: ${invoiceId}`);
+    const response = await fetch(`${CIABRA_API}/invoices/applications/invoices/${invoiceId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Basic ${AUTH_TOKEN}`,
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        data.gateway = 'ciabra';
+        return data;
+    } else {
+        if (response.status === 404) return null;
+        throw new Error(`Ciabra Error ${response.status}`);
+    }
+}
+
 app.get('/api/invoices/:id', async (req, res) => {
     const config = loadConfig();
-    const gateway = config.gateway;
+    const activeGateway = config.gateway;
     const invoiceId = req.params.id;
-    console.log(`[PROXY] GET INVOICE ENTRY: ID=${invoiceId} Gateway=${gateway}`);
+    console.log(`[PROXY] GET INVOICE ENTRY: ID=${invoiceId} ActiveGateway=${activeGateway}`);
 
     try {
-        // We could store gateway in transaction ID (e.g. "FD-...") or just query current.
-        // Or query both!
-        // For simplicity: Query Active Gateway FIRST. If 404, try others?
-        // Or just let the user setting dictate (Admin responsibility).
-
         let data = null;
-        let responseStatus = 404;
 
-        if (gateway === 'fastdepix') {
-            // Fetch from FastDePix
-            const url = `${FASTDEPIX_API}/transactions/${invoiceId}`;
-            console.log(`[PROXY] Fetching FastDePix: ${url}`);
-
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}` }
-            });
-            responseStatus = response.status;
-
-            if (response.ok) {
-                const json = await response.json();
-                const tx = json.data || json;
-
-                // Normalization for Success.html (CamelCase pixCode is required!)
-                data = {
-                    id: tx.id,
-                    status: tx.status === 'PAID' ? 'PAID' : 'PENDING',
-                    price: tx.amount,
-                    // Both snake and camelCase to be safe
-                    pix_code: tx.qr_code_text,
-                    pixCode: tx.qr_code_text,
-                    qrCode: tx.qr_code_text,
-                    pix_url: tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`
-                };
-            } else {
-                try {
-                    const errJson = await response.json();
-                    console.error('[FASTDEPIX] GET Error:', errJson);
-                    data = { error: errJson }; // Pass upstream error
-                } catch (e) {
-                    data = { error: "Upstream error" };
-                }
-            }
-
+        // 1. Try Active Gateway First
+        if (activeGateway === 'fastdepix') {
+            try { data = await fetchFromFastDePix(invoiceId); } catch (e) { console.error("FastDePix Active Search Err:", e.message); }
         } else {
-            // Fetch from Ciabra (Existing logic)
-            // ...
-            const response = await fetch(`${CIABRA_API}/invoices/applications/invoices/${invoiceId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Basic ${AUTH_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            data = await response.json();
-            responseStatus = response.status;
+            try { data = await fetchFromCiabra(invoiceId); } catch (e) { console.error("Ciabra Active Search Err:", e.message); }
         }
 
-        // Console log for debugging
-        // console.log(`[PROXY] GET /api/invoices/${invoiceId} (${gateway}) ->`, responseStatus);
+        // 2. If Not Found, Try Other Gateway (Smart Fallback)
+        if (!data) {
+            console.log(`[PROXY] Invoice not found in active gateway (${activeGateway}). Trying backup...`);
+            const fallbackGateway = activeGateway === 'fastdepix' ? 'ciabra' : 'fastdepix';
 
-        if (data) res.status(responseStatus).json(data);
-        else res.status(404).json({ error: "Not found" });
+            if (fallbackGateway === 'fastdepix') {
+                try { data = await fetchFromFastDePix(invoiceId); } catch (e) { console.error("FastDePix Backup Search Err:", e.message); }
+            } else {
+                try { data = await fetchFromCiabra(invoiceId); } catch (e) { console.error("Ciabra Backup Search Err:", e.message); }
+            }
+        }
+
+        if (data) {
+            res.json(data);
+        } else {
+            res.status(404).json({ error: "Invoice not found in any gateway" });
+        }
 
     } catch (error) {
         console.error('Error:', error);
