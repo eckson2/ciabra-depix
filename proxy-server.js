@@ -171,7 +171,9 @@ async function fetchFromFastDePix(invoiceId) {
         return {
             id: tx.id,
             gateway: 'fastdepix',
-            status: tx.status === 'PAID' ? 'PAID' : 'PENDING',
+            id: tx.id,
+            gateway: 'fastdepix',
+            status: tx.status, // Pass raw status (e.g. PAID, SETTLED, CONFIRMED)
             price: tx.amount,
             pix_code: tx.qr_code_text,
             pixCode: tx.qr_code_text,
