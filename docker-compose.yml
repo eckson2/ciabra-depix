@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  ciabra-pix:
+    image: node:18-alpine
+    working_dir: /app
+    command: sh -c "npm install && node proxy-server.js"
+    volumes:
+      - /home/projeto-ciabra:/app
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+
+        # HTTPS
+        - "traefik.http.routers.ciabra-secure.rule=Host(`ciabra.toptvs.online`)"
+        - "traefik.http.routers.ciabra-secure.entrypoints=websecure"
+        - "traefik.http.routers.ciabra-secure.tls=true"
+        - "traefik.http.routers.ciabra-secure.tls.certresolver=letsencryptresolver"
+
+        # HTTP → HTTPS
+        - "traefik.http.routers.ciabra.rule=Host(`ciabra.toptvs.online`)"
+        - "traefik.http.routers.ciabra.entrypoints=web"
+        - "traefik.http.routers.ciabra.middlewares=redirect-to-https"
+
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+        # Porta interna
+        - "traefik.http.services.ciabra.loadbalancer.server.port=3000"
+    networks:
+      - topnet
+
+networks:
+  topnet:
+    external: true

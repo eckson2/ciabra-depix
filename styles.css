@@ -1,0 +1,332 @@
+:root {
+    --primary-blue: #0066ff;
+    --primary-dark: #0052cc;
+    --accent-red: #ff3b30;
+    --silver: #f0f2f5;
+    --success-green: #00c853;
+    --text-dark: #1f2937;
+    --text-gray: #6b7280;
+    --white: #ffffff;
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0a1128;
+    /* Dark navy background */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 480px;
+}
+
+.card {
+    background: var(--white);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Branded Header Area */
+.branded-header {
+    background: linear-gradient(135deg, #0052cc 0%, #0066ff 100%);
+    padding: 30px 20px;
+    text-align: center;
+    color: var(--white);
+    position: relative;
+}
+
+.logo-container {
+    margin-bottom: 20px;
+}
+
+.brand-logo {
+    max-height: 120px;
+    width: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.brand-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.contact-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    margin-top: 15px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.contact-item i {
+    font-size: 1.1rem;
+}
+
+/* Card Content Area */
+.card-body {
+    padding: 30px 25px;
+}
+
+h1 {
+    color: var(--text-dark);
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.subtitle {
+    color: var(--text-gray);
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 0.95rem;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    color: var(--text-dark);
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+input[type="number"],
+input[type="text"] {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #edf2f7;
+    border-radius: 16px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background: #f8fafc;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
+}
+
+.btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 16px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary {
+    background: linear-gradient(to right, var(--primary-blue), var(--primary-dark));
+    color: var(--white);
+    box-shadow: 0 8px 20px rgba(0, 102, 255, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(0, 102, 255, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* PIX Elements */
+.amount-display {
+    text-align: center;
+    padding: 20px;
+    background: #f0f7ff;
+    border: 2px solid #e1effe;
+    border-radius: 16px;
+    margin-bottom: 25px;
+}
+
+.amount-value {
+    color: var(--success-green);
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.qrcode-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 30px 0;
+}
+
+#qrcodeDiv canvas {
+    padding: 15px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.qr-label {
+    margin-top: 15px;
+    color: var(--text-gray);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+#pixCode {
+    width: 100%;
+    height: 100px;
+    padding: 15px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    background: #f8fafc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    resize: none;
+    color: #334155;
+    word-break: break-all;
+    margin-bottom: 15px;
+}
+
+/* Success State - Payment Confirmed */
+.payment-confirmed {
+    text-align: center;
+    padding: 20px 0;
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.check-container {
+    width: 100px;
+    height: 100px;
+    background: #e8fcf1;
+    color: var(--success-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    margin: 0 auto 25px;
+    box-shadow: 0 10px 25px rgba(0, 200, 83, 0.2);
+}
+
+.confirmed-title {
+    color: var(--success-green);
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.confirmed-msg {
+    color: var(--text-gray);
+    margin-bottom: 30px;
+}
+
+/* Floating WhatsApp Button (Standard UI) */
+.whatsapp-float {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 70px;
+    height: 70px;
+    background: #25d366;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.whatsapp-float:hover {
+    transform: scale(1.1);
+}
+
+.error {
+    background: #fff5f5;
+    color: #c53030;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    margin-top: 20px;
+    border-left: 5px solid #fc8181;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    body {
+        padding: 15px;
+    }
+
+    .card {
+        border-radius: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+    }
+}

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Suporte - Pagamento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Branded Header -->
+            <div class="branded-header">
+                <div class="logo-container">
+                    <img src="logo.png" alt="Top Suporte" class="brand-logo">
+                </div>
+                <h2 class="brand-title">Finalize seu Pagamento</h2>
+                <div class="contact-badge">
+                    <div class="contact-item">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Francisco</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>(84) 9 8117-5632</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div id="loading" class="loading">
+                    <i class="fa-solid fa-circle-notch fa-spin"
+                        style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 15px;"></i>
+                    <p>Processando seu pagamento...</p>
+                </div>
+
+                <!-- Main PIX Info -->
+                <div id="pixInfo" style="display: none;">
+                    <div class="amount-display">
+                        <span class="amount-label"
+                            style="display:block; color:var(--text-gray); font-size:0.9rem; margin-bottom:5px;">Valor a
+                            pagar:</span>
+                        <span class="amount-value" id="displayAmount">R$ 0,00</span>
+                    </div>
+
+                    <div id="paymentIndicator"
+                        style="text-align: center; margin-bottom: 20px; padding: 10px; background: #fffbeb; border-radius: 12px; border: 1px solid #fef3c7;">
+                        <span style="color: #b45309; font-size: 0.9rem; font-weight: 600;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Aguardando pagamento...
+                        </span>
+                    </div>
+
+                    <div class="qrcode-container">
+                        <div id="qrcodeDiv"></div>
+                        <p class="qr-label">Escaneie o QR Code acima</p>
+                    </div>
+
+                    <div class="pix-code-container">
+                        <label>Código PIX (Copia e Cola):</label>
+                        <textarea id="pixCode" readonly onclick="this.select()"></textarea>
+                        <button class="btn btn-primary" onclick="copyPixCode()">
+                            <i class="fa-solid fa-copy"></i> Copiar Código
+                        </button>
+                    </div>
+
+                    <div class="fallback-container" style="margin-top: 20px;">
+                        <a id="checkoutLink" href="#" target="_blank" class="btn btn-secondary"
+                            style="text-decoration: none;">
+                            <i class="fa-solid fa-link"></i> Checkout Oficial
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Success State View -->
+                <div id="paymentConfirmed" class="payment-confirmed">
+                    <div class="check-container">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <h2 class="confirmed-title">Pagamento Confirmado!</h2>
+                    <p class="confirmed-msg">Seu pagamento foi processado com sucesso.</p>
+
+                    <div class="amount-display" style="padding: 15px; margin-bottom: 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:var(--text-gray)">Valor pago:</span>
+                            <span style="color:var(--success-green); font-weight:800;" id="finalAmount">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Comprovante Details -->
+                    <div class="contact-badge"
+                        style="background:#f8fafc; color:var(--text-dark); margin-bottom:30px; border:1px solid #e2e8f0; text-align:left;">
+                        <div
+                            style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.85rem;">
+                            <span style="color:var(--text-gray)">Data:</span>
+                            <span id="paymentDate">-</span>
+                        </div>
+                        <div
+                            style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.85rem;">
+                            <span style="color:var(--text-gray)">ID:</span>
+                            <span id="paymentId">-</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                            <span style="color:var(--text-gray)">Descrição:</span>
+                            <span id="paymentDesc">-</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="window.location.href='checkout.html'">
+                        <i class="fa-solid fa-plus"></i> Novo Pagamento
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="window.print()"
+                        style="margin-top:15px; background:none; border:1px solid #e1effe;">
+                        <i class="fa-solid fa-print"></i> Imprimir Comprovante
+                    </button>
+                </div>
+
+                <div id="error" class="error" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Button -->
+    <a href="https://wa.me/5584981175632?text=Preciso%20de%20ajuda%20com%20meu%20pagamento" class="whatsapp-float"
+        target="_blank">
+        <i class="fa-brands fa-whatsapp" style="color: white; font-size: 35px;"></i>
+    </a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        const invoiceId = localStorage.getItem('current_invoice_id');
+        const amount = localStorage.getItem('current_invoice_amount');
+        let pollingInterval = null;
+
+        if (!invoiceId) {
+            window.location.href = 'checkout.html';
+        }
+
+        function copyPixCode() {
+            const pixCode = document.getElementById('pixCode');
+            pixCode.select();
+            document.execCommand('copy');
+
+            const btn = document.querySelector('.pix-code-container .btn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+            btn.classList.replace('btn-primary', 'btn-secondary');
+
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('btn-secondary', 'btn-primary');
+            }, 2000);
+        }
+
+        let retryCount = 0;
+        const MAX_RETRIES = 12;
+        const RETRY_DELAY = 2000;
+
+        // Helper to check if invoice is paid (DEEP SCANNER)
+        function isPaid(inv) {
+            if (!inv) return false;
+
+            const rawJson = JSON.stringify(inv);
+            const rawUpper = rawJson.toUpperCase();
+
+            // 1. Scanner de Termos de Sucesso (Busca o valor bruto em qualquer lugar)
+            const paidValues = ['"PAID"', '"PAGO"', '"RECEIVED"', '"RECEBIDO"', '"CONFIRMED"', '"SUCCESS"', '"CONCLUIDO"', '"SETTLED"'];
+            if (paidValues.some(val => rawUpper.includes(val))) {
+                return true;
+            }
+
+            // 2. Scanner Recursivo de Propriedades (Busca por chaves que falem de pagamento)
+            function deepSearch(obj) {
+                if (!obj || typeof obj !== 'object') return false;
+
+                // Chaves comuns de sucesso
+                const successKeys = ['status', 'situacao', 'invoiceStatus', 'state', 'paymentStatus'];
+                for (let k of successKeys) {
+                    const val = (obj[k] || "").toString().toUpperCase();
+                    if (['PAID', 'PAGO', 'RECEIVED', 'RECEBIDO', 'CONFIRMED', 'SUCCESS', 'CONCLUIDO', 'LIQUIDADO'].includes(val)) return true;
+                }
+
+                // Chaves de valor
+                const paidAmt = parseFloat(obj.totalPaid || obj.paidAmount || obj.amountPaid || 0);
+                const targetAmt = parseFloat(obj.price || obj.amount || amount || 0);
+                if (paidAmt > 0 && paidAmt >= targetAmt) return true;
+
+                // Percorre filhos
+                for (let key in obj) {
+                    if (typeof obj[key] === 'object') {
+                        if (deepSearch(obj[key])) return true;
+                    }
+                }
+                return false;
+            }
+
+            return deepSearch(inv);
+        }
+
+        async function loadInvoiceDetails() {
+            try {
+                // Prevent caching
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/api/invoices/${invoiceId}?t=${timestamp}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error('Erro ao carregar cobrança');
+
+                const invoice = await response.json();
+
+                // Check for payment status first
+                if (isPaid(invoice)) {
+                    showConfirmedState(invoice);
+                    return;
+                }
+
+                // Link oficial
+                if (invoice.url) document.getElementById('checkoutLink').href = invoice.url;
+
+                // Valor
+                const formattedAmount = `R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`;
+                document.getElementById('displayAmount').textContent = formattedAmount;
+                document.getElementById('finalAmount').textContent = formattedAmount;
+
+                const pixCode = findPixCode(invoice);
+                if (pixCode) {
+                    displayPixCode(pixCode);
+                    startStatusPolling(); // Start polling after displaying PIX
+                    return;
+                }
+
+                if (invoice.installments && invoice.installments.length > 0) {
+                    const instId = invoice.installments[0].id;
+                    if (instId) {
+                        const code = await loadInstallmentPayments(instId);
+                        if (code) {
+                            startStatusPolling();
+                            return;
+                        }
+                    }
+                }
+
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++;
+                    document.getElementById('loading').innerHTML = `
+                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--primary-blue); margin-bottom: 15px;"></i>
+                        <p>Aguardando QR Code...<br><small>Tentativa ${retryCount} de ${MAX_RETRIES}</small></p>`;
+                    setTimeout(loadInvoiceDetails, RETRY_DELAY);
+                } else {
+                    throw new Error('QR Code não carregado automaticamente. Use o link oficial abaixo.');
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Poll for payment status
+        function startStatusPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(async () => {
+                try {
+                    const timestamp = new Date().getTime();
+                    const response = await fetch(`/api/invoices/${invoiceId}?t=${timestamp}`);
+                    if (response.ok) {
+                        const invoice = await response.json();
+                        if (isPaid(invoice)) {
+                            clearInterval(pollingInterval);
+                            showConfirmedState(invoice);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Erro no polling:", e);
+                }
+            }, 5000);
+        }
+
+        function showConfirmedState(inv) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('pixInfo').style.display = 'none';
+            document.getElementById('paymentConfirmed').style.display = 'block';
+
+            if (inv) {
+                document.getElementById('paymentId').textContent = inv.id.split('-')[0].toUpperCase();
+                document.getElementById('paymentDesc').textContent = inv.description || 'Serviços Top Suporte';
+
+                // Format date
+                const date = inv.paidDate || inv.updatedAt || new Date().toISOString();
+                const formattedDate = new Date(date).toLocaleString('pt-BR');
+                document.getElementById('paymentDate').textContent = formattedDate;
+
+                // Final amount
+                const finalAmt = inv.totalPaid || inv.price || amount;
+                document.getElementById('finalAmount').textContent = `R$ ${parseFloat(finalAmt).toFixed(2).replace('.', ',')}`;
+            }
+
+            // Success vibration if mobile
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }
+
+        function findPixCode(obj) {
+            if (!obj || typeof obj !== 'object') return null;
+            if (typeof obj === 'string' && obj.startsWith('000201')) return obj;
+            for (let key in obj) {
+                const val = obj[key];
+                if (['pixCode', 'emv', 'brCode', 'qrCode'].includes(key) && typeof val === 'string' && val.startsWith('000201')) return val;
+                if (typeof val === 'object') {
+                    const found = findPixCode(val);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        async function loadInstallmentPayments(id) {
+            try {
+                const res = await fetch(`/api/installments/${id}/payments`, {
+                    method: 'GET'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const code = findPixCode(data);
+                    if (code) {
+                        displayPixCode(code);
+                        return code;
+                    }
+                }
+            } catch (e) { }
+            return null;
+        }
+
+        function displayPixCode(pixCode) {
+            document.getElementById('pixCode').value = pixCode;
+            const qrcodeDiv = document.getElementById('qrcodeDiv');
+            qrcodeDiv.innerHTML = '';
+
+            try {
+                new QRCode(qrcodeDiv, {
+                    text: pixCode,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (e) {
+                console.error('Erro ao gerar QR Code:', e);
+                qrcodeDiv.innerHTML = '<p style="color:red">Erro visual no QR Code. Use o código abaixo.</p>';
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('pixInfo').style.display = 'block';
+        }
+
+        loadInvoiceDetails();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Suporte - Gerar PIX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Branded Header -->
+            <div class="branded-header">
+                <div class="logo-container">
+                    <img src="logo.png" alt="Top Suporte" class="brand-logo">
+                </div>
+                <h2 class="brand-title">Pagamento via PIX</h2>
+                <div class="contact-badge">
+                    <div class="contact-item">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Francisco</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>(84) 9 8117-5632</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <p class="subtitle">Informe o valor para gerar o pagamento</p>
+
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label for="amount">Valor total (R$)</label>
+                        <input type="number" id="amount" step="0.01" min="0.05" required placeholder="0,00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Descrição</label>
+                        <input type="text" id="description" placeholder="Ex: Assinatura Mensal"
+                            value="Serviços Top Suporte">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="generateBtn">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span class="btn-text">Gerar Pagamento</span>
+                        <span class="btn-loading" style="display: none;">Gerando...</span>
+                    </button>
+                </form>
+
+                <div id="error" class="error" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Button -->
+    <a href="https://wa.me/5584981175632?text=Preciso%20de%20ajuda%20com%20meu%20pagamento" class="whatsapp-float"
+        target="_blank">
+        <i class="fa-brands fa-whatsapp" style="color: white; font-size: 35px;"></i>
+    </a>
+
+    <script>
+
+
+        // Gera CPF válido aleatório
+        function generateValidCPF() {
+            function randomDigit() {
+                return Math.floor(Math.random() * 10);
+            }
+
+            function calculateDigit(cpfArray, factor) {
+                let total = 0;
+                for (let i = 0; i < factor - 1; i++) {
+                    total += cpfArray[i] * (factor - i);
+                }
+                const remainder = total % 11;
+                return remainder < 2 ? 0 : 11 - remainder;
+            }
+
+            // Gera 9 primeiros dígitos
+            const cpf = [];
+            for (let i = 0; i < 9; i++) {
+                cpf.push(randomDigit());
+            }
+
+            // Calcula primeiro dígito verificador
+            cpf.push(calculateDigit(cpf, 10));
+
+            // Calcula segundo dígito verificador
+            cpf.push(calculateDigit(cpf, 11));
+
+            // Formata CPF: 000.000.000-00
+            return `${cpf.slice(0, 3).join('')}.${cpf.slice(3, 6).join('')}.${cpf.slice(6, 9).join('')}-${cpf.slice(9, 11).join('')}`;
+        }
+
+        document.getElementById('checkoutForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const amount = parseFloat(document.getElementById('amount').value);
+            const description = document.getElementById('description').value || 'Pagamento PIX';
+
+            const errorDiv = document.getElementById('error');
+            const btnText = document.querySelector('.btn-text');
+            const btnLoading = document.querySelector('.btn-loading');
+            const generateBtn = document.getElementById('generateBtn');
+
+            // Hide error
+            errorDiv.style.display = 'none';
+
+            // Show loading
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline';
+            generateBtn.disabled = true;
+
+            try {
+
+
+                // First, create a generic customer
+                const validCPF = generateValidCPF();
+                const customerData = {
+                    fullName: "Cliente PIX",
+                    document: validCPF
+                };
+
+                const customerResponse = await fetch('/api/customers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(customerData)
+                });
+
+                if (!customerResponse.ok) {
+                    throw new Error('Erro ao criar cliente');
+                }
+
+                const customer = await customerResponse.json();
+                const customerId = customer.id;
+
+                // Calculate due date (1 day from now)
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 1);
+
+                // Create invoice
+                const invoiceData = {
+                    customerId: customerId,
+                    description: description,
+                    dueDate: dueDate.toISOString(),
+                    installmentCount: 1,
+                    invoiceType: "SINGLE",
+                    items: [],
+                    price: amount,
+                    externalId: `PIX-${Date.now()}`,
+                    paymentTypes: ["PIX"],
+                    notifications: [],
+                    webhooks: []
+                };
+
+                const response = await fetch('/api/invoices', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(invoiceData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Erro ao criar cobrança');
+                }
+
+                const invoice = await response.json();
+
+                // Store invoice ID and redirect to success page
+                localStorage.setItem('current_invoice_id', invoice.id);
+                localStorage.setItem('current_invoice_amount', amount);
+                window.location.href = 'success.html';
+
+            } catch (error) {
+                errorDiv.textContent = `Erro: ${error.message}`;
+                errorDiv.style.display = 'block';
+
+                // Hide loading
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

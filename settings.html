@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - Top Suporte</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --dark: #111827;
+            --darker: #0b0f19;
+            --card: #1f2937;
+            --text: #e5e7eb;
+            --success: #22c55e;
+            --blue-pdf: #1976D2; /* Blue requested for PDF header */
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--darker);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px; /* Wider container for split view */
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 { margin: 0; font-size: 2rem; }
+        
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: 1fr 1.5fr; } /* Settings | Receipt Gen */
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #374151;
+            padding-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Gateway Switcher Styles */
+        .gateway-options {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .gw-btn {
+            background: rgba(0,0,0,0.2);
+            border: 2px solid #374151;
+            border-radius: 8px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            position: relative;
+        }
+        
+        .gw-btn:hover { border-color: var(--primary); }
+        
+        .gw-btn.active {
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .gw-btn i.check {
+            position: absolute;
+            top: 10px; right: 10px;
+            color: var(--success);
+            display: none;
+        }
+        .gw-btn.active i.check { display: block; }
+        
+        .gw-name { font-weight: 700; font-size: 1.1rem; display: block; margin-bottom: 0.25rem; }
+        .gw-desc { font-size: 0.85rem; color: #9ca3af; }
+
+        /* Form Styles */
+        .form-section { margin-bottom: 1.5rem; }
+        .section-label { 
+            color: var(--primary); 
+            font-weight: 600; 
+            margin-bottom: 1rem; 
+            text-transform: uppercase; 
+            font-size: 0.8rem; 
+            letter-spacing: 1px;
+        }
+        
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #d1d5db; }
+        input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #374151;
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: white;
+            font-family: inherit;
+            box-sizing: border-box; /* Fix width overflow */
+        }
+        input:focus { outline: none; border-color: var(--primary); }
+
+        .btn-generate {
+            width: 100%;
+            background: var(--blue-pdf);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-generate:hover { filter: brightness(1.1); }
+
+        /* --- PDF TEMPLATE (Hidden from view, used for generation) --- */
+        #pdf-template {
+            width: 800px; /* Fixed A4-ish width */
+            background: white;
+            color: #333;
+            font-family: 'Arial', sans-serif; /* Standard PDF font */
+            display: none; /* Hidden */
+        }
+        
+        .pdf-header {
+            background-color: var(--blue-pdf);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .pdf-header h2 { margin: 0 0 10px 0; font-size: 28px; }
+        .pdf-date { font-size: 14px; opacity: 0.9; }
+        
+        .pdf-body { padding: 40px; }
+        
+        .value-card {
+            background: #F3F8FC;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .value-label { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .value-amount { font-size: 32px; color: #00C853; font-weight: bold; }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .info-label { font-weight: bold; color: #555; }
+        .info-val { font-weight: bold; color: #333; }
+        
+        .section-header {
+            border-left: 4px solid var(--blue-pdf);
+            padding-left: 10px;
+            margin: 30px 0 15px 0;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #333;
+            background: #f9f9f9;
+            padding-top: 5px; padding-bottom: 5px;
+        }
+        
+        .data-list { font-size: 14px; }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .data-label { color: #666; font-weight: bold; }
+        .data-value { text-align: right; color: #333; }
+
+        .pdf-footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #888;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Administração</h1>
+        <p style="color: #9ca3af;">Configurações do Sistema e Utilitários</p>
+    </div>
+
+    <div class="container grid">
+        
+        <!-- CARD 1: PAYMENT SETTINGS -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fa-solid fa-credit-card"></i> Gateway de Pagamento
+            </div>
+            
+            <div class="gateway-options">
+                <div class="gw-btn" id="btn-ciabra" onclick="setGateway('ciabra')">
+                    <i class="fa-solid fa-circle-check check"></i>
+                    <span class="gw-name">Ciabra</span>
+                    <span class="gw-desc">Gateway Padrão</span>
+                </div>
+                
+                <div class="gw-btn" id="btn-fastdepix" onclick="setGateway('fastdepix')">
+                    <i class="fa-solid fa-circle-check check"></i>
+                    <span class="gw-name">FastDePix</span>
+                    <span class="gw-desc">Gateway Alternativo</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <p id="gw-status" style="font-size: 0.9rem; color: #9ca3af;">Lendo configuração...</p>
+            </div>
+        </div>
+
+        <!-- CARD 2: RECEIPT GENERATOR -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fa-solid fa-file-invoice"></i> Gerador de Comprovante
+            </div>
+            
+            <form id="receiptForm" onsubmit="generatePDF(event)">
+                
+                <div class="form-section">
+                    <div class="section-label">Dados da Transação</div>
+                    <div class="input-group">
+                        <label>Valor (R$)</label>
+                        <input type="text" id="r_amount" value="3.250,00" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-label">Origem (Pagador)</div>
+                    <div class="input-group">
+                        <label>Nome</label>
+                        <input type="text" id="r_orig_name" value="CIABRA CAPITAL" required>
+                    </div>
+                    <div class="input-group">
+                        <label>CNPJ</label>
+                        <input type="text" id="r_orig_doc" value="61.892.662/0001-08">
+                    </div>
+                    <div class="input-group">
+                        <label>Instituição</label>
+                        <input type="text" id="r_orig_bank" value="CELCOIN IP S.A">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-label">Destino (Recebedor)</div>
+                    <div class="input-group">
+                        <label>Nome</label>
+                        <input type="text" id="r_dest_name" value="L F ESTETICA DE FESTAS E EVENTOS LTDA" required>
+                    </div>
+                    <div class="input-group">
+                        <label>CNPJ/CPF</label>
+                        <input type="text" id="r_dest_doc" value="48.240.494/0001-08">
+                    </div>
+                    <div class="input-group">
+                        <label>Instituição</label>
+                        <input type="text" id="r_dest_bank" value="Banco Inter S.A.">
+                    </div>
+                    <div class="input-group">
+                        <label>Chave PIX</label>
+                        <input type="text" id="r_dest_key" value="76d16ef5-7672-4f7b-8e8a-16ba482c9585">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-generate">
+                    <i class="fa-solid fa-download"></i> BAIXAR COMPROVANTE PDF
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- HIDDEN HTML TEMPLATE FOR PDF -->
+    <div id="pdf-template">
+        <div class="pdf-header">
+            <h2>Comprovante de Transferência</h2>
+            <div class="pdf-date" id="pdf_date_str">05/01/2026 às 21:37:38</div>
+        </div>
+
+        <div class="pdf-body">
+            
+            <div class="value-card">
+                <div class="value-label">Valor da Transferência</div>
+                <div class="value-amount">R$ <span id="pdf_amount">3250,00</span></div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">Tipo de Transferência</div>
+                <div class="info-val">PIX</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">ID da Transação</div>
+                <div class="info-val" id="pdf_id">E13935893202601060022PcHY8n5VsuT</div>
+            </div>
+
+            <!-- ORIGIN -->
+            <div class="section-header">ORIGEM</div>
+            <div class="data-list">
+                <div class="data-row">
+                    <div class="data-label">Nome</div>
+                    <div class="data-value" id="pdf_orig_name">CIABRA CAPITAL</div>
+                </div>
+                <div class="data-row">
+                    <div class="data-label">CNPJ</div>
+                    <div class="data-value" id="pdf_orig_doc">61.892.662/0001-08</div>
+                </div>
+                <div class="data-row">
+                    <div class="data-label">Instituição</div>
+                    <div class="data-value" id="pdf_orig_bank">CELCOIN IP S.A</div>
+                </div>
+            </div>
+
+            <!-- DESTINATION -->
+            <div class="section-header" style="margin-top: 20px;">DESTINO</div>
+            <div class="data-list">
+                <div class="data-row">
+                    <div class="data-label">Nome</div>
+                    <div class="data-value" id="pdf_dest_name">...</div>
+                </div>
+                <div class="data-row">
+                    <div class="data-label">CNPJ</div>
+                    <div class="data-value" id="pdf_dest_doc">...</div>
+                </div>
+                <div class="data-row">
+                    <div class="data-label">Instituição</div>
+                    <div class="data-value" id="pdf_dest_bank">...</div>
+                </div>
+                <div class="data-row">
+                    <div class="data-label">Chave PIX</div>
+                    <div class="data-value" id="pdf_dest_key">...</div>
+                </div>
+            </div>
+
+            <div class="pdf-footer">
+                Comprovante de transferência PIX realizada.
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- GATEWAY LOGIC ---
+        let currentGateway = '';
+
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                updateUI(data.gateway);
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        async function setGateway(gateway) {
+            document.getElementById('gw-status').innerText = 'Salvando...';
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gateway })
+                });
+                const data = await res.json();
+                updateUI(data.gateway);
+            } catch (error) {
+                console.error(error);
+                alert('Erro ao salvar');
+            }
+        }
+
+        function updateUI(gateway) {
+            currentGateway = gateway;
+            document.getElementById('btn-ciabra').classList.remove('active');
+            document.getElementById('btn-fastdepix').classList.remove('active');
+            
+            document.getElementById(`btn-${gateway}`).classList.add('active');
+            document.getElementById('gw-status').innerText = `Gateway Ativo: ${gateway.toUpperCase()}`;
+        }
+
+        loadSettings();
+
+        // --- PDF RECEIPT LOGIC ---
+        function generatePDF(e) {
+            e.preventDefault();
+
+            // 1. Populate Hidden Template with Form Data
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
+            const randomId = 'E' + Date.now() + Math.floor(Math.random() * 100000000000000); // Fake Pix E2E ID
+
+            document.getElementById('pdf_date_str').innerText = dateStr;
+            document.getElementById('pdf_amount').innerText = document.getElementById('r_amount').value;
+            document.getElementById('pdf_id').innerText = randomId; // Or allow custom? Auto is better.
+
+            // Origin
+            document.getElementById('pdf_orig_name').innerText = document.getElementById('r_orig_name').value;
+            document.getElementById('pdf_orig_doc').innerText = document.getElementById('r_orig_doc').value;
+            document.getElementById('pdf_orig_bank').innerText = document.getElementById('r_orig_bank').value;
+
+            // Dest
+            document.getElementById('pdf_dest_name').innerText = document.getElementById('r_dest_name').value;
+            document.getElementById('pdf_dest_doc').innerText = document.getElementById('r_dest_doc').value;
+            document.getElementById('pdf_dest_bank').innerText = document.getElementById('r_dest_bank').value;
+            document.getElementById('pdf_dest_key').innerText = document.getElementById('r_dest_key').value;
+
+            // 2. Generate PDF
+            const element = document.getElementById('pdf-template');
+            
+            // Temporarily show it (or clone) so it renders? 
+            // html2pdf handles hidden elements if we pass it directly, but style display:none might block layout.
+            // Better to display block, capture, then hide. But that flickers.
+            // Actually, html2pdf needs it rendered.
+            
+            element.style.display = 'block';
+
+            const opt = {
+                margin: 0,
+                filename: `comprovante-pix-${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none'; // Hide again
+            });
+        }
+    </script>
+</body>
+</html>
