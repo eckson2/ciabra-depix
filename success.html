@@ -314,7 +314,8 @@
                 });
             } catch (e) {
                 console.error('Erro ao gerar QR Code:', e);
-                qrcodeDiv.innerHTML = '<p style="color:red">Erro visual no QR Code. Use o código abaixo.</p>';
+                // Fallback to Image API
+                qrcodeDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixCode)}" style="width:250px; height:250px; border-radius:8px;">`;
             }
 
             document.getElementById('loading').style.display = 'none';
