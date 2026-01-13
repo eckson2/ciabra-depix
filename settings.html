@@ -317,8 +317,10 @@
                     updateUI(data.gateway);
                 } catch (e) {
                     console.error("Parse Error:", e);
-                    console.log("Response Body:", text);
-                    alert(`Erro (${res.status}): ${text.substring(0, 100)}...`);
+                    console.log("Response Body (Raw):", text);
+                    // Show a snippet of the HTML to help debug (e.g. 404 info)
+                    const snippet = text.length > 200 ? text.substring(0, 200) + '...' : text;
+                    alert(`Erro (${res.status}): Resposta inválida do servidor.\n\nConteúdo:\n${snippet}`);
                 }
             } catch (error) {
                 console.error(error);
@@ -365,14 +367,14 @@
                 });
 
                 const data = await res.json();
-                
+
                 if (data.success && data.url) {
                     // Open in new tab/window
                     window.open(data.url, '_blank');
                     btn.innerHTML = '<i class="fa-solid fa-check"></i> Sucesso!';
-                    setTimeout(() => { 
-                         btn.innerHTML = originalText;
-                         btn.disabled = false;
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                     }, 2000);
                 } else {
                     throw new Error(data.error || 'Erro desconhecido');

@@ -488,7 +488,7 @@ app.post('/api/generate-receipt', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Servidor Ciabra PIX rodando!`);
+    console.log(`\n🚀 Servidor Ciabra PIX Rodando! (v2.1 - RECEIPTS ENABLED)`);
     console.log(`📍 URL interna: http://0.0.0.0:${PORT}`);
     console.log(`🔄 Proxy configurado para: ${CIABRA_API}`);
     console.log(`\n✅ Acesse pelo domínio\n`);
