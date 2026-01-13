@@ -150,11 +150,38 @@ app.post('/api/invoices', async (req, res) => {
     try {
         if (gateway === 'fastdepix') {
             // --- FASTDEPIX IMPLEMENTATION ---
-            // Strategy: Always send Embedded User Data (Company) to bypass validation and limits
+            // Strategy: "Warmup" / "Unlock" User
+            // 1. Create a small transaction (R$ 15.00) with the new user to "activate" them.
+            // 2. Then create the real transaction with the same user.
 
             const randomUser = generateRandomUser();
 
-            // Note: Sending 'user_id' alone failed validation. Must send 'user' object.
+            // Step 1: Warmup Transaction
+            if (parseFloat(body.price) > 500) {
+                try {
+                    console.log(`[FASTDEPIX] Sending Warmup Transaction (R$ 15.00) for ${randomUser.cpf_cnpj}...`);
+                    await fetch(`${FASTDEPIX_API}/transactions`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            amount: 15.00,
+                            custom_page_id: null,
+                            user: {
+                                name: randomUser.name,
+                                cpf_cnpj: randomUser.cpf_cnpj,
+                                email: randomUser.email,
+                                user_type: "company",
+                                company_name: randomUser.company_name
+                            }
+                        })
+                    });
+                    console.log(`[FASTDEPIX] Warmup Sent. Proceeding to Real Transaction...`);
+                } catch (wErr) {
+                    console.error(`[FASTDEPIX] Warmup Error (Ignored):`, wErr.message);
+                }
+            }
+
+            // Step 2: Real Transaction
             const payload = {
                 amount: body.price,
                 custom_page_id: null,
