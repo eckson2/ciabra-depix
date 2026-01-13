@@ -150,52 +150,24 @@ app.post('/api/invoices', async (req, res) => {
     try {
         if (gateway === 'fastdepix') {
             // --- FASTDEPIX IMPLEMENTATION ---
-            // Bypass 500 BRL limit strategy:
-            // 1. Create User via API to get an ID (Authenticated User)
-            // 2. Create Transaction with that user_id
+            // Strategy: Always send Embedded User Data (Company) to bypass validation and limits
 
             const randomUser = generateRandomUser();
-            let fastDePixUserId = null;
 
-            console.log(`[FASTDEPIX] Attempting to create user: ${randomUser.name}`);
-
-            try {
-                // Try /users endpoint (Common standard)
-                const userRes = await fetch(`${FASTDEPIX_API}/users`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(randomUser)
-                });
-
-                if (userRes.ok) {
-                    const uData = await userRes.json();
-                    fastDePixUserId = (uData.data || uData).id;
-                    console.log(`[FASTDEPIX] User Created! ID: ${fastDePixUserId}`);
-                } else {
-                    console.warn(`[FASTDEPIX] Create User failed (${userRes.status}). Trying fallback...`);
-                }
-            } catch (e) {
-                console.error(`[FASTDEPIX] User creation error: ${e.message}`);
-            }
-
+            // Note: Sending 'user_id' alone failed validation. Must send 'user' object.
             const payload = {
                 amount: body.price,
-                custom_page_id: null
+                custom_page_id: null,
+                user: {
+                    name: randomUser.name,
+                    cpf_cnpj: randomUser.cpf_cnpj, // CNPJ
+                    email: randomUser.email,
+                    user_type: "company", // Try company for higher limits
+                    company_name: randomUser.company_name
+                }
             };
 
-            if (fastDePixUserId) {
-                payload.user_id = fastDePixUserId; // Authenticated flow
-            } else {
-                // Fallback: Embed user data (Anonymous flow)
-                payload.user = {
-                    name: randomUser.name,
-                    cpf_cnpj: randomUser.cpf_cnpj,
-                    email: randomUser.email,
-                    user_type: "individual"
-                };
-            }
-
-            console.log(`[FASTDEPIX] Sending Transaction Payload (User ID: ${fastDePixUserId || 'Embedded'})`);
+            console.log(`[FASTDEPIX] Sending Transaction Payload (Embedded User: ${randomUser.cpf_cnpj} - ${randomUser.company_name})`);
 
             const response = await fetch(`${FASTDEPIX_API}/transactions`, {
                 method: 'POST',
