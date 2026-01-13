@@ -354,6 +354,31 @@ app.get('/settings', (req, res) => {
 // --- Gerador de Comprovante (Server Side) ---
 const RECEIPTS_DIR = path.join(__dirname, 'receipts');
 
+// Cleanup Routine: Delete receipts older than 24 hours
+setInterval(() => {
+    console.log('[CLEANUP] Scanning for old receipts...');
+    fs.readdir(RECEIPTS_DIR, (err, files) => {
+        if (err) return console.error("[CLEANUP] Scan failed:", err);
+
+        const now = Date.now();
+        const ONE_DAY = 24 * 60 * 60 * 1000;
+
+        files.forEach(file => {
+            if (!file.endsWith('.html')) return; // Safety check
+
+            const filePath = path.join(RECEIPTS_DIR, file);
+            fs.stat(filePath, (err, stats) => {
+                if (err) return;
+                if (now - stats.mtimeMs > ONE_DAY) {
+                    fs.unlink(filePath, err => {
+                        if (!err) console.log(`[CLEANUP] Deleted old receipt: ${file}`);
+                    });
+                }
+            });
+        });
+    });
+}, 60 * 60 * 1000); // Run every 1 hour
+
 app.post('/api/generate-receipt', (req, res) => {
     try {
         const data = req.body;
