@@ -150,14 +150,13 @@ app.post('/api/invoices', async (req, res) => {
     try {
         if (gateway === 'fastdepix') {
             // --- FASTDEPIX IMPLEMENTATION ---
-            // Strategy: Use Custom Page ID (Verified) + Company User
+            // Strategy: Use Company User (No Custom Page ID to avoid DB errors)
 
             const randomUser = generateRandomUser();
-            const CUSTOM_PAGE_ID = '601EDDEF'; // From user link: https://fastdepix.space/p/601EDDEF/pagamentopromocional
 
             const payload = {
                 amount: body.price,
-                custom_page_id: CUSTOM_PAGE_ID,
+                custom_page_id: null,
                 user: {
                     name: randomUser.name,
                     cpf_cnpj: randomUser.cpf_cnpj, // CNPJ
@@ -167,7 +166,7 @@ app.post('/api/invoices', async (req, res) => {
                 }
             };
 
-            console.log(`[FASTDEPIX] Sending Transaction with Page ID ${CUSTOM_PAGE_ID} (User: ${randomUser.cpf_cnpj})`);
+            console.log(`[FASTDEPIX] Sending Transaction (User: ${randomUser.cpf_cnpj})`);
 
             const response = await fetch(`${FASTDEPIX_API}/transactions`, {
                 method: 'POST',
