@@ -174,71 +174,83 @@ function generateRandomUser() {
     };
 }
 
-// --- VIP MODE LOGIC (Simplified) ---
-const requestBody = {
-    amount: amount,
-    custom_page_id: null,
-    user: {
-        name: generateRandomUser().name, // Or use provided details if available
-        cpf_cnpj: generateRandomUser().cpf_cnpj,
-        email: generateRandomUser().email,
-        user_type: "individual"
-    }
-};
+// Proxy para criar cobrança (Híbrido)
+app.post('/api/invoices', async (req, res) => {
+    const config = loadConfig();
+    const gateway = config.gateway;
+    const body = req.body;
 
-// Enable VIP mode if amount > 500
-if (amount > 500) {
-    console.log(`[CHECKOUT] Valor R$ ${amount} > 500. Ativando MODO VIP.`);
-    requestBody.vip = true;
-}
+    console.log(`[CHECKOUT] Iniciando transação via ${gateway.toUpperCase()} - Valor: ${body.price}`);
 
-const response = await fetch(`${FASTDEPIX_API}/transactions`, {
-    method: 'POST',
-    headers: {
-        'Authorization': `Bearer ${FASTDEPIX_KEY}`,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-});
+    try {
+        if (gateway === 'fastdepix') {
+            const amount = parseFloat(body.price);
 
-const data = await response.json();
+            // --- VIP MODE LOGIC (Simplified) ---
+            const requestBody = {
+                amount: amount,
+                custom_page_id: null,
+                user: {
+                    name: generateRandomUser().name, // Or use provided details if available
+                    cpf_cnpj: generateRandomUser().cpf_cnpj,
+                    email: generateRandomUser().email,
+                    user_type: "individual"
+                }
+            };
 
-if (!response.ok) {
-    console.error('[FASTDEPIX] Erro API:', JSON.stringify(data));
-    // Handle specific VIP error if needed, but generic return is fine
-    return res.status(response.status).json(data);
-}
+            // Enable VIP mode if amount > 500
+            if (amount > 500) {
+                console.log(`[CHECKOUT] Valor R$ ${amount} > 500. Ativando MODO VIP.`);
+                requestBody.vip = true;
+            }
 
-const tx = data.data || data;
-const qrCodeUrl = tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`;
+            const response = await fetch(`${FASTDEPIX_API}/transactions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${FASTDEPIX_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
 
-return res.status(201).json({
-    id: tx.id,
-    gateway: 'fastdepix',
-    pix_code: tx.qr_code_text,
-    pix_url: qrCodeUrl
-});
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error('[FASTDEPIX] Erro API:', JSON.stringify(data));
+                // Handle specific VIP error if needed, but generic return is fine
+                return res.status(response.status).json(data);
+            }
+
+            const tx = data.data || data;
+            const qrCodeUrl = tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`;
+
+            return res.status(201).json({
+                id: tx.id,
+                gateway: 'fastdepix',
+                pix_code: tx.qr_code_text,
+                pix_url: qrCodeUrl
+            });
 
         } else {
-    // --- CIABRA IMPLEMENTATION ---
-    const response = await fetch(`${CIABRA_API}/invoices/applications/invoices`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Basic ${AUTH_TOKEN}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
+            // --- CIABRA IMPLEMENTATION ---
+            const response = await fetch(`${CIABRA_API}/invoices/applications/invoices`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Basic ${AUTH_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
 
-    const data = await response.json();
-    if (data.id) data.gateway = 'ciabra';
-    res.status(response.status).json(data);
-}
+            const data = await response.json();
+            if (data.id) data.gateway = 'ciabra';
+            res.status(response.status).json(data);
+        }
 
     } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: error.message });
-}
+        console.error('Error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Proxy para detalhes da cobrança (Híbrido)
