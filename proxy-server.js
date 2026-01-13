@@ -153,176 +153,71 @@ function generateRandomUser() {
     };
 }
 
-// --- FastDePix Whitelist Scraper (> 500 BRL) ---
-const cheerio = require('cheerio');
-const WHITELIST_URL = 'https://fastdepix.space/whitelist/?ref=601EDDEF';
-
-async function generateWhitelistTransaction(amount) {
-    console.log(`[FASTDEPIX-SCRAPER] Starting Whitelist Bypass for R$ ${amount}...`);
-
-    // 1. GET Form (CSRF + Cookie)
-    const getRes = await fetch(WHITELIST_URL);
-    if (!getRes.ok) throw new Error(`Failed to load whitelist page: ${getRes.status}`);
-
-    const getHtml = await getRes.text();
-    const cookies = getRes.headers.get('set-cookie');
-    const $ = cheerio.load(getHtml);
-
-    const csrfToken = $('input[name="csrf_token"]').val();
-    const partnerCode = $('input[name="partner_code"]').val() || '601EDDEF';
-
-    if (!csrfToken) throw new Error("CSRF Token not found on whitelist page");
-    console.log(`[FASTDEPIX-SCRAPER] Got CSRF: ${csrfToken.substring(0, 10)}...`);
-
-    // 2. Prepare Form Data
-    const randomUser = generateRandomUser();
-    const params = new URLSearchParams();
-    params.append('csrf_token', csrfToken);
-    params.append('partner_code', partnerCode);
-    params.append('name', randomUser.name);
-    params.append('cpf_cnpj', randomUser.cpf_cnpj); // Using CNPJ/CPF generated
-    params.append('amount', amount);
-    params.append('user_type', 'individual'); // Page default
-
-    // 3. POST Form
-    console.log(`[FASTDEPIX-SCRAPER] Posting form data...`);
-    const postRes = await fetch(WHITELIST_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Cookie': cookies,
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': WHITELIST_URL,
-            'Origin': 'https://fastdepix.space'
-        },
-        body: params
-    });
-
-    const postHtml = await postRes.text();
-
-    // 4. Parse Result (Looking for Pix Code)
-    // Strategy: Look for "copia e cola" input or standard Pix format (starts with 000201...)
-    const $post = cheerio.load(postHtml);
-
-    // Try finding input with specific ID/Class often used, or search explicitly
-    // Common ID: 'pix_code', 'brcodepix', etc. Or just regex the whole body.
-    let pixCode = $post('input#pix_code').val() || $post('textarea').val();
-
-    if (!pixCode) {
-        // Fallback: Regex search for EMV standard (000201...)
-        const emvRegex = /000201[a-zA-Z0-9]{20,}/;
-        const match = postHtml.match(emvRegex);
-        if (match) pixCode = match[0];
+// --- VIP MODE LOGIC (Simplified) ---
+const requestBody = {
+    amount: amount,
+    custom_page_id: null,
+    user: {
+        name: generateRandomUser().name, // Or use provided details if available
+        cpf_cnpj: generateRandomUser().cpf_cnpj,
+        email: generateRandomUser().email,
+        user_type: "individual"
     }
+};
 
-    if (!pixCode) {
-        console.error("[FASTDEPIX-SCRAPER] Failed to extract Pix Code. Dumping DBG HTML to log...");
-        // console.log(postHtml.substring(0, 500)); // Log parsing
-        throw new Error("Pix Code not found in success response");
-    }
-
-    // Attempt to extract Transaction ID (if present in URL or text)
-    // Often redirects or shows "Pedido #12345"
-    let txId = 'W' + Date.now(); // Fallback ID
-
-    console.log(`[FASTDEPIX-SCRAPER] Success! Pix Code found.`);
-
-    return {
-        id: txId,
-        gateway: 'fastdepix',
-        status: 'PENDING',
-        price: amount,
-        pix_code: pixCode,
-        pix_url: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixCode)}`
-    };
+// Enable VIP mode if amount > 500
+if (amount > 500) {
+    console.log(`[CHECKOUT] Valor R$ ${amount} > 500. Ativando MODO VIP.`);
+    requestBody.vip = true;
 }
 
-// Proxy para criar cobrança (Híbrido)
-app.post('/api/invoices', async (req, res) => {
-    const config = loadConfig();
-    const gateway = config.gateway;
-    const body = req.body;
+const response = await fetch(`${FASTDEPIX_API}/transactions`, {
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${FASTDEPIX_KEY}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+});
 
-    console.log(`[CHECKOUT] Iniciando transação via ${gateway.toUpperCase()} - Valor: ${body.price}`);
+const data = await response.json();
 
-    try {
-        if (gateway === 'fastdepix') {
-            const amount = parseFloat(body.price);
+if (!response.ok) {
+    console.error('[FASTDEPIX] Erro API:', JSON.stringify(data));
+    // Handle specific VIP error if needed, but generic return is fine
+    return res.status(response.status).json(data);
+}
 
-            // --- STRATEGY SWITCHER ---
-            if (amount > 500) {
-                // > 500: Use Whitelist Scraper Bypass
-                try {
-                    const tx = await generateWhitelistTransaction(amount);
-                    return res.status(201).json(tx);
-                } catch (e) {
-                    console.error(`[FASTDEPIX] Whitelist Bypass Failed: ${e.message}`);
-                    // Fallthrough to standard API? Or Fail?
-                    // Usually better to fail or let user know. 
-                    // But let's try standard API as last resort backup (though it will likely 400).
-                    console.warn("[FASTDEPIX] Falling back to Standard API...");
-                }
-            }
+const tx = data.data || data;
+const qrCodeUrl = tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`;
 
-            // --- STANDARD API (<= 500 or Fallback) ---
-            const randomUser = generateRandomUser();
-            const payload = {
-                amount: amount,
-                custom_page_id: null,
-                user: {
-                    name: randomUser.name,
-                    cpf_cnpj: randomUser.cpf_cnpj,
-                    email: randomUser.email,
-                    user_type: "individual" // Reset to individual for standard
-                }
-            };
-
-            const response = await fetch(`${FASTDEPIX_API}/transactions`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${FASTDEPIX_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                console.error('[FASTDEPIX] Erro API:', JSON.stringify(data));
-                return res.status(response.status).json(data);
-            }
-
-            const tx = data.data || data;
-            const qrCodeUrl = tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`;
-
-            return res.status(201).json({
-                id: tx.id,
-                gateway: 'fastdepix',
-                pix_code: tx.qr_code_text,
-                pix_url: qrCodeUrl
-            });
+return res.status(201).json({
+    id: tx.id,
+    gateway: 'fastdepix',
+    pix_code: tx.qr_code_text,
+    pix_url: qrCodeUrl
+});
 
         } else {
-            // --- CIABRA IMPLEMENTATION ---
-            const response = await fetch(`${CIABRA_API}/invoices/applications/invoices`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Basic ${AUTH_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            });
+    // --- CIABRA IMPLEMENTATION ---
+    const response = await fetch(`${CIABRA_API}/invoices/applications/invoices`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${AUTH_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
 
-            const data = await response.json();
-            if (data.id) data.gateway = 'ciabra';
-            res.status(response.status).json(data);
-        }
+    const data = await response.json();
+    if (data.id) data.gateway = 'ciabra';
+    res.status(response.status).json(data);
+}
 
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
-    }
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
+}
 });
 
 // Proxy para detalhes da cobrança (Híbrido)
