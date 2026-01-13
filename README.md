@@ -1,107 +1,91 @@
-# Ciabra PIX - Sistema de Pagamentos
+# Ciabra & FastDePix Gateway - Proxy Server v2.3
 
-Site simples em HTML para gerar pagamentos PIX usando a API do Ciabra Invoice.
+Sistema de pagamentos híbrido que integra **Ciabra Invoice** e **FastDePix** para geração de PIX dinâmico com suporte a transações de alto valor (VIP).
+
+## 🚀 Novidades da v2.3
+- **FastDePix Nativo**: Integração direta via API oficial.
+- **Modo VIP Automático**: Transações > R$ 500 detectadas automaticamente e processadas via rota VIP (sem scraping).
+- **Persistência de Configuração**: O gateway escolhido em `/settings` é salvo em `config.json` e sobrevive a reinicializações.
+- **Gerador de Comprovantes**: Geração local de PDFs/HTML com fuso horário corrigido (Brasília).
+
+---
 
 ## 📁 Estrutura do Projeto
 
 ```
 ciabra-pix/
-├── index.html      # Página de login
-├── setup.html      # Configuração de credenciais API
-├── checkout.html   # Geração de PIX
-├── success.html    # Exibição do QR Code e código PIX
-└── styles.css      # Estilos
+├── proxy-server.js # Backend Node.js (Core Logic)
+├── checkout.html   # Página de Pagamento
+├── settings.html   # Painel de Controle (Troca de Gateway)
+├── success.html    # Tela de Sucesso (QR Code)
+├── config.json     # (Gerado) Armazena gateway ativo
+└── receipts/       # (Gerado) Armazena comprovantes temporários
 ```
 
-## 🚀 Como Usar
+## ⚙️ Configuração e Instalação
 
-### 1. Inicie o servidor local
+### 1. Pré-requisitos
+- Node.js v14+ (Recomendado v18 LTS)
+- Docker (Opcional, para deploy em swarm)
 
-**⚠️ IMPORTANTE**: Não abra o arquivo diretamente! Use um servidor HTTP local para evitar erros de CORS.
-
-**Opção 1 - Python (recomendado)**:
+### 2. Rodando Localmente
 ```bash
-python3 server.py
+npm install
+node proxy-server.js
 ```
+Acesse: `http://localhost:3000`
 
-**Opção 2 - Node.js**:
+### 3. Deploy com Docker Swarm (Produção)
 ```bash
-node server.js
+# Atualizar código
+git pull origin main
+
+# Rebuild e Update do Serviço
+docker build -t ciabratop_ciabratop-pix .
+docker service update --force ciabratop_ciabratop-pix
 ```
 
-**Opção 3 - Python direto**:
-```bash
-python3 -m http.server 8000
-```
+---
 
-Depois acesse: **http://localhost:8000**
+## 💳 Gateways Suportados
 
-### 2. Faça Login
-- Digite qualquer usuário e senha (é apenas uma tela simples de autenticação)
+### 1. FastDePix (Padrão)
+Otimizado para alta performance e anonimato.
+- **Modo Normal (< R$ 500)**: Transação padrão anônima.
+- **Modo VIP (> R$ 500)**: Ativa automaticamente a flag `vip: true`. Gera dados de cliente aleatórios válidos (Nome Brasileiro + CPF válido) para aprovação imediata.
 
-### 3. Configure as Credenciais
-- **Chave Pública**: Sua chave pública do Ciabra
-- **Chave Secreta**: Sua chave secreta do Ciabra
+### 2. Ciabra (Secundário)
+Gateway robusto para redundância ou uso específico.
+- **Ativação**: Pode ser ativado manualmente via painel `/settings`.
 
-As credenciais serão validadas automaticamente com a API do Ciabra.
+---
 
-### 4. Gere um PIX
-- Informe o valor desejado
-- Adicione uma descrição (opcional)
-- Clique em "Gerar PIX"
+## 🔧 Painel de Controle
 
-### 5. Visualize o QR Code
-- Escaneie o QR Code ou copie o código PIX
-- Use no app do seu banco para efetuar o pagamento
+Acesse `/settings` para:
+1. **Alternar Gateway**: Escolha entre FastDePix e Ciabra em tempo real.
+2. **Testar Comprovantes**: Gere comprovantes de teste para validação visual.
+3. **Verificar Status**: Veja qual gateway está ativo no servidor.
 
-## 🔑 Obtendo as Credenciais
+> **Nota:** A configuração salva em `/settings` é persistente. Se você mudar para Ciabra, ele **continuará** Ciabra mesmo após reiniciar o container, até que seja alterado novamente.
 
-1. Acesse [Ciabra Invoice](https://plataforma.ciabra.com.br)
-2. Faça login na sua conta
-3. Vá em "Perfil do Usuário" → "Integração"
-4. Copie a Chave Pública e Chave Secreta
+## 📝 Comprovantes
+- URLs geradas em `/receipts/R{timestamp}.html`
+- Limpeza automática de arquivos com mais de 24 horas.
+- Fuso horário forçado para `America/Sao_Paulo`.
 
-## 📋 Pré-requisitos
+---
 
-- Conta validada no Ciabra Invoice
-- Chaves de API (Pública e Secreta)
+## 🔒 Segurança Setup
+As chaves de API estão configuradas no `proxy-server.js`.
+- **FastDePix**: Bearer Token
+- **Ciabra**: Basic Auth (Public + Secret Key)
 
-## 🔒 Segurança
+## 🌐 Endpoints Principais
+- `POST /api/invoices`: Cria transação (escolhe gateway via config).
+- `GET /api/invoices/:id`: Busca status da transação (busca inteligente no gateway ativo + fallback).
+- `POST /api/settings`: Alterna gateway ativo.
+- `POST /api/generate-receipt`: Gera comprovante estático.
 
-**IMPORTANTE**: Este é um exemplo simples para demonstração. Em produção:
-
-- ⚠️ NÃO armazene credenciais no localStorage
-- ⚠️ Use um backend para fazer as chamadas à API
-- ⚠️ Implemente autenticação real com JWT ou similar
-- ⚠️ Use HTTPS sempre
-
-## 🌐 API Utilizada
-
-**Base URL**: `https://api.az.center`
-
-**Endpoints**:
-- `GET /auth/applications/check` - Validação de credenciais
-- `POST /invoices/applications/customers` - Criação de cliente (automático)
-- `POST /invoices/applications/invoices` - Criação de cobrança
-- `GET /invoices/applications/invoices/:id` - Detalhes da cobrança
-
-## 📖 Documentação Completa
-
-Acesse a documentação oficial: [https://docs.ciabra.com.br](https://docs.ciabra.com.br)
-
-## 🎨 Recursos
-
-- ✅ Interface limpa e responsiva
-- ✅ Validação de credenciais em tempo real
-- ✅ Criação automática de cliente
-- ✅ Geração de QR Code automática
-- ✅ Botão de copiar código PIX
-- ✅ Tratamento de erros
-- ✅ Estados de loading
-
-## 🛠️ Tecnologias
-
-- HTML5
-- CSS3
-- JavaScript (Vanilla)
-- QRCode.js (biblioteca externa para gerar QR Code)
+---
+*Desenvolvido para alta disponibilidade e conversão.*
