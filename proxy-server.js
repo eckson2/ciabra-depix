@@ -474,7 +474,7 @@ app.post('/api/generate-receipt', (req, res) => {
     <div class="receipt-card">
         <div class="header">
             <h2>Comprovante de Transferência</h2>
-            <div class="date">${new Date().toLocaleString('pt-BR')}</div>
+            <div class="date">${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</div>
         </div>
         <div class="body">
             <div class="amount-box">
