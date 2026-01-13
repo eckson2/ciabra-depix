@@ -201,12 +201,7 @@
             /* Force dark text */
             font-family: 'Arial', sans-serif;
             /* Standard PDF font */
-
-            /* Hidden but rendered logic */
-            position: fixed;
-            left: -9999px;
-            top: 0;
-            z-index: 9999;
+            display: none;
         }
 
         .pdf-header {
@@ -552,8 +547,12 @@
             // 2. Generate PDF
             const element = document.getElementById('pdf-template');
 
-            // It's already "rendered" but off-screen (left: -9999px). 
-            // html2pdf can capture it fine without flickering.
+            // Strategy: Show it ON TOP of everything temporarily to ensure capture with correct styles
+            element.style.display = 'block';
+            element.style.position = 'absolute';
+            element.style.top = '0';
+            element.style.left = '0';
+            element.style.zIndex = '99999';
 
             const opt = {
                 margin: 0,
@@ -563,18 +562,18 @@
                     scale: 2,
                     useCORS: true,
                     logging: true,
-                    windowWidth: 850 // Simula largura da janela para garantir layout
+                    scrollY: 0,
+                    windowWidth: 850
                 },
                 jsPDF: { unit: 'px', format: [800, 1100], orientation: 'portrait' }
-                // Custom format matching our div width roughly
             };
 
-            // Remove position fixed temporarily for capture if needed, 
-            // but usually html2pdf handles it if we just target the element.
-            // Actually, for html2canvas to work best, we sometimes clones it.
-            // Let's try capturing the off-screen element directly.
-
-            html2pdf().set(opt).from(element).save();
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none'; // Hide again
+            }).catch(err => {
+                console.error(err);
+                element.style.display = 'none';
+            });
         }
     </script>
 </body>
