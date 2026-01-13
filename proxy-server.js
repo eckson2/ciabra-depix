@@ -21,23 +21,18 @@ const FASTDEPIX_KEY = 'fdpx_43ea7e43d457193da13ef4f3ea6c9d4ab323343b462d17729bc6
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 function loadConfig() {
-    // FORCE DEFAULT TO FASTDEPIX (User Preference)
-    // If config exists but is 'ciabra', we override it?
-    // User said: "Vir como fastdepix por padrao sempre que reiniciar"
-    // So let's force the default if the file doesn't exist OR just default loading.
-
     try {
         if (fs.existsSync(CONFIG_FILE)) {
             const conf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-            // Optional: If you want to force FastDePix on every restart, uncomment next line:
-            // if (conf.gateway !== 'fastdepix') console.log("[CONFIG] Loaded non-default gateway:", conf.gateway);
+            console.log(`[CONFIG] Carregado gateway: ${conf.gateway}`);
             return conf;
         }
     } catch (e) {
         console.error("Erro ao ler config:", e);
     }
 
-    // Default Fallback
+    // Default Fallback only if no file exists
+    console.log("[CONFIG] Arquivo de config não encontrado. Usando padrão: fastdepix");
     return { gateway: 'fastdepix' };
 }
 
@@ -233,6 +228,7 @@ app.post('/api/invoices', async (req, res) => {
 
         } else {
             // --- CIABRA IMPLEMENTATION ---
+            console.log(`[CHECKOUT] Redirecionando para CIABRA (Gateway Ativo)`);
             const response = await fetch(`${CIABRA_API}/invoices/applications/invoices`, {
                 method: 'POST',
                 headers: {
@@ -248,7 +244,13 @@ app.post('/api/invoices', async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('[CHECKOUT ERROR]', error);
+
+        // Only fallback to Ciabra if the current attempt failed AND existing gateway IS NOT ciabra
+        // But user said > 500 was falling back even when not wanted. 
+        // So let's be explicit: return the error, do NOT auto-fallback silently.
+        // Or if we do fallback, log it clearly.
+
         res.status(500).json({ error: error.message });
     }
 });
@@ -529,13 +531,18 @@ app.post('/api/generate-receipt', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Servidor Ciabra PIX Rodando! (v2.2 - FIXED SYNTAX & SETTINGS)`);
+    console.log(`\n🚀 Servidor Ciabra PIX Rodando! (v2.3 - PERSISTENCE FIXED)`);
     console.log(`📍 URL interna: http://0.0.0.0:${PORT}`);
     console.log(`🔄 Proxy configurado para: ${CIABRA_API}`);
 
-    // Force Default Gateway (User Request)
-    saveConfig({ gateway: 'fastdepix' });
-    console.log(`[INIT] Gateway resetado para FASTDEPIX por padrão.`);
+    // Ensure initial config exists, defaulting to 'fastdepix' if missing, BUT DO NOT OVERWRITE
+    const current = loadConfig();
+    if (!fs.existsSync(CONFIG_FILE)) {
+        saveConfig({ gateway: 'fastdepix' });
+        console.log(`[INIT] Config salvo como FASTDEPIX (novo arquivo).`);
+    } else {
+        console.log(`[INIT] Mantendo gateway configurado: ${current.gateway}`);
+    }
 
     console.log(`\n✅ Acesse pelo domínio\n`);
 });
