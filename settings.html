@@ -192,6 +192,12 @@
             filter: brightness(1.1);
         }
 
+        .btn-generate:disabled {
+            background: #555;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
         /* --- PDF TEMPLATE (Hidden from view, used for generation) --- */
         #pdf-template {
             width: 800px;
@@ -524,56 +530,74 @@
         function generatePDF(e) {
             e.preventDefault();
 
-            // 1. Populate Hidden Template with Form Data
+            // 1. Get Template and Populate Data
+            const template = document.getElementById('pdf-template');
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
-            const randomId = 'E' + Date.now() + Math.floor(Math.random() * 100000000000000); // Fake Pix E2E ID
+            const randomId = 'E' + Date.now() + Math.floor(Math.random() * 100000000000000);
 
             document.getElementById('pdf_date_str').innerText = dateStr;
             document.getElementById('pdf_amount').innerText = document.getElementById('r_amount').value;
-            document.getElementById('pdf_id').innerText = randomId; // Or allow custom? Auto is better.
+            document.getElementById('pdf_id').innerText = randomId;
 
-            // Origin
             document.getElementById('pdf_orig_name').innerText = document.getElementById('r_orig_name').value;
             document.getElementById('pdf_orig_doc').innerText = document.getElementById('r_orig_doc').value;
             document.getElementById('pdf_orig_bank').innerText = document.getElementById('r_orig_bank').value;
 
-            // Dest
             document.getElementById('pdf_dest_name').innerText = document.getElementById('r_dest_name').value;
             document.getElementById('pdf_dest_doc').innerText = document.getElementById('r_dest_doc').value;
             document.getElementById('pdf_dest_bank').innerText = document.getElementById('r_dest_bank').value;
             document.getElementById('pdf_dest_key').innerText = document.getElementById('r_dest_key').value;
 
-            // 2. Generate PDF
-            const element = document.getElementById('pdf-template');
+            // 2. Clone for Generation (Fix for Blank PDF)
+            const clone = template.cloneNode(true);
+            clone.id = 'pdf-render-' + Date.now();
 
-            // Strategy: Show it ON TOP of everything temporarily to ensure capture with correct styles
-            element.style.display = 'block';
-            element.style.position = 'absolute';
-            element.style.top = '0';
-            element.style.left = '0';
-            element.style.zIndex = '99999';
+            // Force visible styles on clone
+            // MUST be visible for html2canvas to capture it
+            clone.style.display = 'block';
+            clone.style.position = 'absolute';
+            clone.style.top = '0';
+            clone.style.left = '0';
+            clone.style.zIndex = '999999';
+            clone.style.background = '#ffffff';
+            clone.style.width = '800px'; // Fixed width
 
-            const opt = {
-                margin: 0,
-                filename: `comprovante-pix-${Date.now()}.pdf`,
-                image: { type: 'jpeg', quality: 1 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    logging: true,
-                    scrollY: 0,
-                    windowWidth: 850
-                },
-                jsPDF: { unit: 'px', format: [800, 1100], orientation: 'portrait' }
-            };
+            document.body.appendChild(clone);
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                element.style.display = 'none'; // Hide again
-            }).catch(err => {
-                console.error(err);
-                element.style.display = 'none';
-            });
+            // 3. Wait for Render, then Capture
+            const btn = document.querySelector('.btn-generate');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const opt = {
+                    margin: 0,
+                    filename: `comprovante-pix-${Date.now()}.pdf`,
+                    image: { type: 'jpeg', quality: 1 },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        logging: true,
+                        scrollY: 0,
+                        windowWidth: 800,
+                        width: 800
+                    },
+                    jsPDF: { unit: 'px', format: [800, 1100], orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(clone).save().then(() => {
+                    document.body.removeChild(clone); // Cleanup
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }).catch(err => {
+                    console.error("PDF Fail:", err);
+                    document.body.removeChild(clone);
+                    btn.innerHTML = 'Erro!';
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+                });
+            }, 500); // 500ms delay to ensure browser paints the clone
         }
     </script>
 </body>
