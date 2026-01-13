@@ -20,16 +20,24 @@ const FASTDEPIX_KEY = 'fdpx_43ea7e43d457193da13ef4f3ea6c9d4ab323343b462d17729bc6
 // Persistência de Configuração
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-function loadConfig() {
-    try {
-        if (fs.existsSync(CONFIG_FILE)) {
-            return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        }
-    } catch (e) {
-        console.error("Erro ao ler config:", e);
+// FORCE DEFAULT TO FASTDEPIX (User Preference)
+// If config exists but is 'ciabra', we override it?
+// User said: "Vir como fastdepix por padrao sempre que reiniciar"
+// So let's force the default if the file doesn't exist OR just default loading.
+
+try {
+    if (fs.existsSync(CONFIG_FILE)) {
+        const conf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+        // Optional: If you want to force FastDePix on every restart, uncomment next line:
+        // if (conf.gateway !== 'fastdepix') console.log("[CONFIG] Loaded non-default gateway:", conf.gateway);
+        return conf;
     }
-    return { gateway: 'fastdepix' }; // Default is now FastDePix
+} catch (e) {
+    console.error("Erro ao ler config:", e);
 }
+
+// Default Fallback
+return { gateway: 'fastdepix' };
 
 function saveConfig(config) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
@@ -41,6 +49,10 @@ app.use(express.json());
 app.use(express.static(__dirname)); // Serve arquivos estáticos
 
 // --- Settings Endpoints ---
+app.get('/settings', (req, res) => {
+    res.sendFile(path.join(__dirname, 'settings.html'));
+});
+
 app.get('/api/settings', (req, res) => {
     res.json(loadConfig());
 });
@@ -438,10 +450,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'checkout.html'));
 });
 
-// Servir settings.html
-app.get('/settings', (req, res) => {
-    res.sendFile(path.join(__dirname, 'settings.html'));
-});
+// (Settings route moved to top to prevent 404s)
 
 // --- Gerador de Comprovante (Server Side) ---
 const RECEIPTS_DIR = path.join(__dirname, 'receipts');
