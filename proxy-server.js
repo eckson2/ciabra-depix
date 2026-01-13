@@ -97,20 +97,45 @@ function generateRandomCPF() {
 
     cpf.push(calculateDigit(cpf, 10));
     cpf.push(calculateDigit(cpf, 11));
-
-    // Formata CPF apenas com números ou . - dependendo da API.
-    // A maioria aceita limpo. Vamos mandar string.
     return cpf.join('');
+}
+
+function generateRandomCNPJ() {
+    const randomDigit = () => Math.floor(Math.random() * 10);
+    const cnpj = Array.from({ length: 8 }, randomDigit); // Root
+    // 0001
+    cnpj.push(0, 0, 0, 1);
+
+    // Check digits
+    const calculateDigit = (arr, weights) => {
+        let sum = 0;
+        for (let i = 0; i < arr.length; i++) {
+            sum += arr[i] * weights[i];
+        }
+        const remainder = sum % 11;
+        return remainder < 2 ? 0 : 11 - remainder;
+    };
+
+    const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    cnpj.push(calculateDigit(cnpj, w1));
+    const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    cnpj.push(calculateDigit(cnpj, w2));
+
+    return cnpj.join('');
 }
 
 function generateRandomUser() {
     const suffix = Math.floor(Math.random() * 10000);
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+
+    // Use Company to try and get higher limits (> 500)
     return {
-        name: `Cliente ${timestamp}_${suffix}`,
-        cpf_cnpj: generateRandomCPF(),
-        email: `cliente${timestamp}${suffix}@anonymous.com`,
-        phone: "11999999999"
+        name: `Usuario ${timestamp}_${suffix}`,
+        cpf_cnpj: generateRandomCNPJ(),
+        email: `corp${timestamp}${suffix}@anonymous.com`,
+        phone: "11999999999",
+        user_type: "company",
+        company_name: `Empresa ${timestamp}_${suffix} LTDA`
     };
 }
 
