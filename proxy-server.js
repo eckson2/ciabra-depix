@@ -353,6 +353,10 @@ app.get('/settings', (req, res) => {
 
 // --- Gerador de Comprovante (Server Side) ---
 const RECEIPTS_DIR = path.join(__dirname, 'receipts');
+if (!fs.existsSync(RECEIPTS_DIR)) {
+    fs.mkdirSync(RECEIPTS_DIR, { recursive: true });
+    console.log(`[INIT] Created receipts directory: ${RECEIPTS_DIR}`);
+}
 
 // Cleanup Routine: Delete receipts older than 24 hours
 setInterval(() => {
