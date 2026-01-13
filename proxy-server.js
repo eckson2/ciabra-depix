@@ -142,9 +142,30 @@ function generateRandomUser() {
     const suffix = Math.floor(Math.random() * 10000);
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
 
+    // List of common Brazilian names
+    const firstNames = [
+        "Jose", "Maria", "Joao", "Ana", "Francisco", "Antonia", "Antonio", "Adriana",
+        "Pedro", "Paula", "Carlos", "Fernanda", "Luiz", "Marcia", "Paulo", "Patricia",
+        "Lucas", "Aline", "Marcos", "Sandra", "Gabriel", "Camila", "Rafael", "Bruna",
+        "Daniel", "Juliana", "Marcelo", "Amanda", "Bruno", "Bruna", "Eduardo", "Jessica",
+        "Felipe", "Leticia", "Rodrigo", "Julia", "Guilherme", "Luciana", "Gustavo", "Vanessa"
+    ];
+
+    const surnames = [
+        "Silva", "Santos", "Oliveira", "Souza", "Lima", "Pereira", "Ferreira", "Costa",
+        "Rodrigues", "Almeida", "Nascimento", "Alves", "Carvalho", "Araujo", "Ribeiro",
+        "Goncalves", "Lopes", "Moraes", "Barbosa", "Martins", "Rocha", "Fernandes",
+        "Cardoso", "Gomes", "Dias", "Duarte", "Teixeira", "Mendes", "Nunes", "Vieira"
+    ];
+
+    const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    // Generate First Name + 2 Surnames for realism
+    const fullName = `${randomItem(firstNames)} ${randomItem(surnames)} ${randomItem(surnames)}`;
+
     // Use Individual Data (CPF) to match 'individual' user_type in payload
     return {
-        name: `Cliente ${timestamp}`,
+        name: fullName,
         cpf_cnpj: generateRandomCPF(),
         email: `cli${timestamp}${suffix}@anonymous.com`,
         phone: "11999999999",
