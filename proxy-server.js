@@ -150,41 +150,14 @@ app.post('/api/invoices', async (req, res) => {
     try {
         if (gateway === 'fastdepix') {
             // --- FASTDEPIX IMPLEMENTATION ---
-            // Strategy: "Warmup" / "Unlock" User
-            // 1. Create a small transaction (R$ 15.00) with the new user to "activate" them.
-            // 2. Then create the real transaction with the same user.
+            // Strategy: Use Custom Page ID (Verified) + Company User
 
             const randomUser = generateRandomUser();
+            const CUSTOM_PAGE_ID = '601EDDEF'; // From user link: https://fastdepix.space/p/601EDDEF/pagamentopromocional
 
-            // Step 1: Warmup Transaction
-            if (parseFloat(body.price) > 500) {
-                try {
-                    console.log(`[FASTDEPIX] Sending Warmup Transaction (R$ 15.00) for ${randomUser.cpf_cnpj}...`);
-                    await fetch(`${FASTDEPIX_API}/transactions`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${FASTDEPIX_KEY}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            amount: 15.00,
-                            custom_page_id: null,
-                            user: {
-                                name: randomUser.name,
-                                cpf_cnpj: randomUser.cpf_cnpj,
-                                email: randomUser.email,
-                                user_type: "company",
-                                company_name: randomUser.company_name
-                            }
-                        })
-                    });
-                    console.log(`[FASTDEPIX] Warmup Sent. Proceeding to Real Transaction...`);
-                } catch (wErr) {
-                    console.error(`[FASTDEPIX] Warmup Error (Ignored):`, wErr.message);
-                }
-            }
-
-            // Step 2: Real Transaction
             const payload = {
                 amount: body.price,
-                custom_page_id: null,
+                custom_page_id: CUSTOM_PAGE_ID,
                 user: {
                     name: randomUser.name,
                     cpf_cnpj: randomUser.cpf_cnpj, // CNPJ
@@ -194,7 +167,7 @@ app.post('/api/invoices', async (req, res) => {
                 }
             };
 
-            console.log(`[FASTDEPIX] Sending Transaction Payload (Embedded User: ${randomUser.cpf_cnpj} - ${randomUser.company_name})`);
+            console.log(`[FASTDEPIX] Sending Transaction with Page ID ${CUSTOM_PAGE_ID} (User: ${randomUser.cpf_cnpj})`);
 
             const response = await fetch(`${FASTDEPIX_API}/transactions`, {
                 method: 'POST',
@@ -212,25 +185,16 @@ app.post('/api/invoices', async (req, res) => {
                 return res.status(response.status).json(data);
             }
 
-            // Normalize response to match Frontend expectations (partially)
-            // Frontend expects { id, ... }
-            // FastDePix returns { data: { id, qr_code_text, ... } } or direct
+            // Normalize response to match Frontend expectations
+            const tx = data.data || data;
 
-            const tx = data.data || data; // Handle wrapper
-
-            // FastDePix might not return an image URL, only the text code.
-            // We can generate a QR code URL using a public API for the frontend to display easily
+            // QR Code URL generator fallback
             const qrCodeUrl = tx.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tx.qr_code_text)}`;
-
-            // Return a normalized structure that our Checkout JS can handle?
-            // Or assume Checkout JS will just read ID and redirect.
-            // But Checkout JS usually fetches Invoice Details next.
-            // Let's ensure ID is compatible.
 
             return res.status(201).json({
                 id: tx.id,
                 gateway: 'fastdepix',
-                pix_code: tx.qr_code_text, // Add extra fields for convenience
+                pix_code: tx.qr_code_text,
                 pix_url: qrCodeUrl
             });
 
