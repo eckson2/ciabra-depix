@@ -20,24 +20,26 @@ const FASTDEPIX_KEY = 'fdpx_43ea7e43d457193da13ef4f3ea6c9d4ab323343b462d17729bc6
 // Persistência de Configuração
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// FORCE DEFAULT TO FASTDEPIX (User Preference)
-// If config exists but is 'ciabra', we override it?
-// User said: "Vir como fastdepix por padrao sempre que reiniciar"
-// So let's force the default if the file doesn't exist OR just default loading.
+function loadConfig() {
+    // FORCE DEFAULT TO FASTDEPIX (User Preference)
+    // If config exists but is 'ciabra', we override it?
+    // User said: "Vir como fastdepix por padrao sempre que reiniciar"
+    // So let's force the default if the file doesn't exist OR just default loading.
 
-try {
-    if (fs.existsSync(CONFIG_FILE)) {
-        const conf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        // Optional: If you want to force FastDePix on every restart, uncomment next line:
-        // if (conf.gateway !== 'fastdepix') console.log("[CONFIG] Loaded non-default gateway:", conf.gateway);
-        return conf;
+    try {
+        if (fs.existsSync(CONFIG_FILE)) {
+            const conf = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+            // Optional: If you want to force FastDePix on every restart, uncomment next line:
+            // if (conf.gateway !== 'fastdepix') console.log("[CONFIG] Loaded non-default gateway:", conf.gateway);
+            return conf;
+        }
+    } catch (e) {
+        console.error("Erro ao ler config:", e);
     }
-} catch (e) {
-    console.error("Erro ao ler config:", e);
-}
 
-// Default Fallback
-return { gateway: 'fastdepix' };
+    // Default Fallback
+    return { gateway: 'fastdepix' };
+}
 
 function saveConfig(config) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
@@ -599,8 +601,13 @@ app.post('/api/generate-receipt', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🚀 Servidor Ciabra PIX Rodando! (v2.1 - RECEIPTS ENABLED)`);
+    console.log(`\n🚀 Servidor Ciabra PIX Rodando! (v2.2 - FIXED SYNTAX & SETTINGS)`);
     console.log(`📍 URL interna: http://0.0.0.0:${PORT}`);
     console.log(`🔄 Proxy configurado para: ${CIABRA_API}`);
+
+    // Force Default Gateway (User Request)
+    saveConfig({ gateway: 'fastdepix' });
+    console.log(`[INIT] Gateway resetado para FASTDEPIX por padrão.`);
+
     console.log(`\n✅ Acesse pelo domínio\n`);
 });
