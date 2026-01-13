@@ -181,22 +181,27 @@ app.post('/api/invoices', async (req, res) => {
         if (gateway === 'fastdepix') {
             const amount = parseFloat(body.price);
 
-            // --- VIP MODE LOGIC (Simplified) ---
+            // --- VIP MODE LOGIC (Optimized) ---
+            // Default payload (Anonymous / No User Data)
             const requestBody = {
                 amount: amount,
-                custom_page_id: null,
-                user: {
-                    name: generateRandomUser().name, // Or use provided details if available
-                    cpf_cnpj: generateRandomUser().cpf_cnpj,
-                    email: generateRandomUser().email,
-                    user_type: "individual"
-                }
+                custom_page_id: null
             };
 
-            // Enable VIP mode if amount > 500
+            // Only attach User Data + VIP flag if amount > 500
             if (amount > 500) {
-                console.log(`[CHECKOUT] Valor R$ ${amount} > 500. Ativando MODO VIP.`);
+                console.log(`[CHECKOUT] Valor R$ ${amount} > 500. Gerando dados de cliente + MODO VIP.`);
+                const user = generateRandomUser();
+
+                requestBody.user = {
+                    name: user.name,
+                    cpf_cnpj: user.cpf_cnpj,
+                    email: user.email,
+                    user_type: "individual"
+                };
                 requestBody.vip = true;
+            } else {
+                console.log(`[CHECKOUT] Valor R$ ${amount} <= 500. Enviando sem dados de cliente.`);
             }
 
             const response = await fetch(`${FASTDEPIX_API}/transactions`, {
