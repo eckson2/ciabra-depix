@@ -351,6 +351,117 @@ app.get('/settings', (req, res) => {
     res.sendFile(path.join(__dirname, 'settings.html'));
 });
 
+// --- Gerador de Comprovante (Server Side) ---
+const RECEIPTS_DIR = path.join(__dirname, 'receipts');
+
+app.post('/api/generate-receipt', (req, res) => {
+    try {
+        const data = req.body;
+        const id = 'R' + Date.now() + Math.floor(Math.random() * 1000);
+        const filename = `${id}.html`;
+        const filePath = path.join(RECEIPTS_DIR, filename);
+
+        // Basic HTML Template for Receipt
+        const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprovante ${id}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px 20px; }
+        .receipt-card { background: white; width: 100%; max-width: 600px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: #1976D2; color: white; padding: 30px; text-align: center; }
+        .header h2 { margin: 0; font-size: 22px; font-weight: 500; }
+        .header .date { font-size: 13px; opacity: 0.9; margin-top: 5px; }
+        .body { padding: 30px; }
+        .amount-box { background: #F3F8FC; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px; }
+        .amount-box .label { font-size: 13px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .amount-box .value { font-size: 36px; color: #00C853; font-weight: 700; margin-top: 5px; }
+        
+        .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .row .label { color: #555; font-weight: 500; }
+        .row .val { color: #333; font-weight: 600; text-align: right; }
+        
+        .section-title { background: #f9fafb; padding: 8px 10px; font-size: 12px; font-weight: 700; color: #555; text-transform: uppercase; margin: 25px -30px 10px; padding-left: 30px; border-left: 4px solid #1976D2; }
+        
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #999; border-top: 1px dashed #ddd; padding-top: 20px; }
+        
+        .actions { margin-top: 30px; text-align: center; }
+        .btn { display: inline-block; padding: 12px 24px; background: #1976D2; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; transition: 0.2s; cursor: pointer; border: none; font-size: 14px; }
+        .btn:hover { background: #1565C0; }
+        .btn.secondary { background: #fff; color: #555; border: 1px solid #ddd; margin-right: 10px; }
+        .btn.secondary:hover { background: #f5f5f5; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .receipt-card { box-shadow: none; max-width: 100%; border-radius: 0; }
+            .actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="header">
+            <h2>Comprovante de Transferência</h2>
+            <div class="date">${new Date().toLocaleString('pt-BR')}</div>
+        </div>
+        <div class="body">
+            <div class="amount-box">
+                <div class="label">Valor da Transferência</div>
+                <div class="value">R$ ${data.amount}</div>
+            </div>
+
+            <div class="row">
+                <div class="label">Tipo de Pagamento</div>
+                <div class="val">PIX</div>
+            </div>
+            <div class="row">
+                <div class="label">ID da Transação</div>
+                <div class="val">E${Date.now()}893202601060022</div>
+            </div>
+
+            <!-- ORIGEM -->
+            <div class="section-title">Dados de Origem</div>
+            <div class="row"><div class="label">Nome</div><div class="val">${data.orig_name}</div></div>
+            <div class="row"><div class="label">CPF/CNPJ</div><div class="val">${data.orig_doc}</div></div>
+            <div class="row"><div class="label">Instituição</div><div class="val">${data.orig_bank}</div></div>
+
+            <!-- DESTINO -->
+            <div class="section-title">Dados de Destino</div>
+            <div class="row"><div class="label">Nome</div><div class="val">${data.dest_name}</div></div>
+            <div class="row"><div class="label">CPF/CNPJ</div><div class="val">${data.dest_doc}</div></div>
+            <div class="row"><div class="label">Instituição</div><div class="val">${data.dest_bank}</div></div>
+            <div class="row"><div class="label">Chave PIX</div><div class="val">${data.dest_key}</div></div>
+
+            <div class="footer">
+                Este comprovante possui valor legal e atesta a realização da transferência acima.<br>
+                Autenticação: ${Math.random().toString(36).substring(2, 15).toUpperCase()}
+            </div>
+
+            <div class="actions">
+                <button onclick="window.print()" class="btn secondary">🖨️ Imprimir / Salvar PDF</button>
+                <a href="${data.checkout_url || '#'}" class="btn">Realizar Nova Transferência</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        fs.writeFileSync(filePath, html);
+
+        console.log(`[RECEIPT] Generated: ${filename}`);
+        res.json({ success: true, url: `/receipts/${filename}` });
+
+    } catch (e) {
+        console.error("Receipt Gen Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Servidor Ciabra PIX rodando!`);
     console.log(`📍 URL interna: http://0.0.0.0:${PORT}`);

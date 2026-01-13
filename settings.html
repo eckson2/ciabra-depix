@@ -7,8 +7,6 @@
     <title>Configurações - Top Suporte</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- html2pdf -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary: #8b5cf6;
@@ -18,7 +16,6 @@
             --text: #e5e7eb;
             --success: #22c55e;
             --blue-pdf: #1976D2;
-            /* Blue requested for PDF header */
         }
 
         body {
@@ -31,7 +28,6 @@
 
         .container {
             max-width: 1000px;
-            /* Wider container for split view */
             margin: 0 auto;
         }
 
@@ -56,8 +52,6 @@
             .grid {
                 grid-template-columns: 1fr 1.5fr;
             }
-
-            /* Settings | Receipt Gen */
         }
 
         .card {
@@ -163,7 +157,6 @@
             color: white;
             font-family: inherit;
             box-sizing: border-box;
-            /* Fix width overflow */
         }
 
         input:focus {
@@ -196,119 +189,6 @@
             background: #555;
             cursor: not-allowed;
             opacity: 0.7;
-        }
-
-        /* --- PDF TEMPLATE (Hidden from view, used for generation) --- */
-        #pdf-template {
-            width: 800px;
-            /* Fixed A4-ish width */
-            background: #ffffff !important;
-            color: #333333 !important;
-            /* Force dark text */
-            font-family: 'Arial', sans-serif;
-            /* Standard PDF font */
-            display: none;
-        }
-
-        .pdf-header {
-            background-color: var(--blue-pdf);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .pdf-header h2 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
-        }
-
-        .pdf-date {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .pdf-body {
-            padding: 40px;
-        }
-
-        .value-card {
-            background: #F3F8FC;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .value-label {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .value-amount {
-            font-size: 32px;
-            color: #00C853;
-            font-weight: bold;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        .info-val {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .section-header {
-            border-left: 4px solid var(--blue-pdf);
-            padding-left: 10px;
-            margin: 30px 0 15px 0;
-            text-transform: uppercase;
-            font-weight: bold;
-            color: #333;
-            background: #f9f9f9;
-            padding-top: 5px;
-            padding-bottom: 5px;
-        }
-
-        .data-list {
-            font-size: 14px;
-        }
-
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .data-label {
-            color: #666;
-            font-weight: bold;
-        }
-
-        .data-value {
-            text-align: right;
-            color: #333;
-        }
-
-        .pdf-footer {
-            margin-top: 40px;
-            text-align: center;
-            color: #888;
-            font-size: 12px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
         }
     </style>
 </head>
@@ -353,7 +233,7 @@
                 <i class="fa-solid fa-file-invoice"></i> Gerador de Comprovante
             </div>
 
-            <form id="receiptForm" onsubmit="generatePDF(event)">
+            <form id="receiptForm" onsubmit="generateReceiptServer(event)">
 
                 <div class="form-section">
                     <div class="section-label">Dados da Transação</div>
@@ -400,80 +280,11 @@
                 </div>
 
                 <button type="submit" class="btn-generate">
-                    <i class="fa-solid fa-download"></i> BAIXAR COMPROVANTE PDF
+                    <i class="fa-solid fa-external-link-alt"></i> GERAR COMPROVANTE (NOVA GUIA)
                 </button>
             </form>
         </div>
 
-    </div>
-
-    <!-- HIDDEN HTML TEMPLATE FOR PDF -->
-    <div id="pdf-template">
-        <div class="pdf-header">
-            <h2>Comprovante de Transferência</h2>
-            <div class="pdf-date" id="pdf_date_str">05/01/2026 às 21:37:38</div>
-        </div>
-
-        <div class="pdf-body">
-
-            <div class="value-card">
-                <div class="value-label">Valor da Transferência</div>
-                <div class="value-amount">R$ <span id="pdf_amount">3250,00</span></div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">Tipo de Transferência</div>
-                <div class="info-val">PIX</div>
-            </div>
-
-            <div class="info-row">
-                <div class="info-label">ID da Transação</div>
-                <div class="info-val" id="pdf_id">E13935893202601060022PcHY8n5VsuT</div>
-            </div>
-
-            <!-- ORIGIN -->
-            <div class="section-header">ORIGEM</div>
-            <div class="data-list">
-                <div class="data-row">
-                    <div class="data-label">Nome</div>
-                    <div class="data-value" id="pdf_orig_name">CIABRA CAPITAL</div>
-                </div>
-                <div class="data-row">
-                    <div class="data-label">CNPJ</div>
-                    <div class="data-value" id="pdf_orig_doc">61.892.662/0001-08</div>
-                </div>
-                <div class="data-row">
-                    <div class="data-label">Instituição</div>
-                    <div class="data-value" id="pdf_orig_bank">CELCOIN IP S.A</div>
-                </div>
-            </div>
-
-            <!-- DESTINATION -->
-            <div class="section-header" style="margin-top: 20px;">DESTINO</div>
-            <div class="data-list">
-                <div class="data-row">
-                    <div class="data-label">Nome</div>
-                    <div class="data-value" id="pdf_dest_name">...</div>
-                </div>
-                <div class="data-row">
-                    <div class="data-label">CNPJ</div>
-                    <div class="data-value" id="pdf_dest_doc">...</div>
-                </div>
-                <div class="data-row">
-                    <div class="data-label">Instituição</div>
-                    <div class="data-value" id="pdf_dest_bank">...</div>
-                </div>
-                <div class="data-row">
-                    <div class="data-label">Chave PIX</div>
-                    <div class="data-value" id="pdf_dest_key">...</div>
-                </div>
-            </div>
-
-            <div class="pdf-footer">
-                Comprovante de transferência PIX realizada.
-            </div>
-
-        </div>
     </div>
 
     <script>
@@ -526,78 +337,53 @@
 
         loadSettings();
 
-        // --- PDF RECEIPT LOGIC ---
-        function generatePDF(e) {
+        // --- SERVER SIDE RECEIPT GENERATION ---
+        async function generateReceiptServer(e) {
             e.preventDefault();
 
-            // 1. Get Template and Populate Data
-            const template = document.getElementById('pdf-template');
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR');
-            const randomId = 'E' + Date.now() + Math.floor(Math.random() * 100000000000000);
-
-            document.getElementById('pdf_date_str').innerText = dateStr;
-            document.getElementById('pdf_amount').innerText = document.getElementById('r_amount').value;
-            document.getElementById('pdf_id').innerText = randomId;
-
-            document.getElementById('pdf_orig_name').innerText = document.getElementById('r_orig_name').value;
-            document.getElementById('pdf_orig_doc').innerText = document.getElementById('r_orig_doc').value;
-            document.getElementById('pdf_orig_bank').innerText = document.getElementById('r_orig_bank').value;
-
-            document.getElementById('pdf_dest_name').innerText = document.getElementById('r_dest_name').value;
-            document.getElementById('pdf_dest_doc').innerText = document.getElementById('r_dest_doc').value;
-            document.getElementById('pdf_dest_bank').innerText = document.getElementById('r_dest_bank').value;
-            document.getElementById('pdf_dest_key').innerText = document.getElementById('r_dest_key').value;
-
-            // 2. Clone for Generation (Fix for Blank PDF)
-            const clone = template.cloneNode(true);
-            clone.id = 'pdf-render-' + Date.now();
-
-            // Force visible styles on clone
-            // MUST be visible for html2canvas to capture it
-            clone.style.display = 'block';
-            clone.style.position = 'absolute';
-            clone.style.top = '0';
-            clone.style.left = '0';
-            clone.style.zIndex = '999999';
-            clone.style.background = '#ffffff';
-            clone.style.width = '800px'; // Fixed width
-
-            document.body.appendChild(clone);
-
-            // 3. Wait for Render, then Capture
             const btn = document.querySelector('.btn-generate');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
             btn.disabled = true;
 
-            setTimeout(() => {
-                const opt = {
-                    margin: 0,
-                    filename: `comprovante-pix-${Date.now()}.pdf`,
-                    image: { type: 'jpeg', quality: 1 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        logging: true,
-                        scrollY: 0,
-                        windowWidth: 800,
-                        width: 800
-                    },
-                    jsPDF: { unit: 'px', format: [800, 1100], orientation: 'portrait' }
-                };
+            const payload = {
+                amount: document.getElementById('r_amount').value,
+                orig_name: document.getElementById('r_orig_name').value,
+                orig_doc: document.getElementById('r_orig_doc').value,
+                orig_bank: document.getElementById('r_orig_bank').value,
+                dest_name: document.getElementById('r_dest_name').value,
+                dest_doc: document.getElementById('r_dest_doc').value,
+                dest_bank: document.getElementById('r_dest_bank').value,
+                dest_key: document.getElementById('r_dest_key').value
+            };
 
-                html2pdf().set(opt).from(clone).save().then(() => {
-                    document.body.removeChild(clone); // Cleanup
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }).catch(err => {
-                    console.error("PDF Fail:", err);
-                    document.body.removeChild(clone);
-                    btn.innerHTML = 'Erro!';
-                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2000);
+            try {
+                const res = await fetch('/api/generate-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
-            }, 500); // 500ms delay to ensure browser paints the clone
+
+                const data = await res.json();
+                
+                if (data.success && data.url) {
+                    // Open in new tab/window
+                    window.open(data.url, '_blank');
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Sucesso!';
+                    setTimeout(() => { 
+                         btn.innerHTML = originalText;
+                         btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Erro desconhecido');
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert('Falha ao gerar comprovante: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
