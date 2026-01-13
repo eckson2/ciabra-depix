@@ -196,12 +196,17 @@
         #pdf-template {
             width: 800px;
             /* Fixed A4-ish width */
-            background: white;
-            color: #333;
+            background: #ffffff !important;
+            color: #333333 !important;
+            /* Force dark text */
             font-family: 'Arial', sans-serif;
             /* Standard PDF font */
-            display: none;
-            /* Hidden */
+
+            /* Hidden but rendered logic */
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            z-index: 9999;
         }
 
         .pdf-header {
@@ -547,24 +552,29 @@
             // 2. Generate PDF
             const element = document.getElementById('pdf-template');
 
-            // Temporarily show it (or clone) so it renders? 
-            // html2pdf handles hidden elements if we pass it directly, but style display:none might block layout.
-            // Better to display block, capture, then hide. But that flickers.
-            // Actually, html2pdf needs it rendered.
-
-            element.style.display = 'block';
+            // It's already "rendered" but off-screen (left: -9999px). 
+            // html2pdf can capture it fine without flickering.
 
             const opt = {
                 margin: 0,
                 filename: `comprovante-pix-${Date.now()}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: true,
+                    windowWidth: 850 // Simula largura da janela para garantir layout
+                },
+                jsPDF: { unit: 'px', format: [800, 1100], orientation: 'portrait' }
+                // Custom format matching our div width roughly
             };
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                element.style.display = 'none'; // Hide again
-            });
+            // Remove position fixed temporarily for capture if needed, 
+            // but usually html2pdf handles it if we just target the element.
+            // Actually, for html2canvas to work best, we sometimes clones it.
+            // Let's try capturing the off-screen element directly.
+
+            html2pdf().set(opt).from(element).save();
         }
     </script>
 </body>
