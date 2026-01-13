@@ -142,14 +142,14 @@ function generateRandomUser() {
     const suffix = Math.floor(Math.random() * 10000);
     const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
 
-    // Use Company to try and get higher limits (> 500)
+    // Use Individual Data (CPF) to match 'individual' user_type in payload
     return {
-        name: `Usuario ${timestamp}_${suffix}`,
-        cpf_cnpj: generateRandomCNPJ(),
-        email: `corp${timestamp}${suffix}@anonymous.com`,
+        name: `Cliente ${timestamp}`,
+        cpf_cnpj: generateRandomCPF(),
+        email: `cli${timestamp}${suffix}@anonymous.com`,
         phone: "11999999999",
-        user_type: "company",
-        company_name: `Empresa ${timestamp}_${suffix} LTDA`
+        user_type: "individual",
+        company_name: null
     };
 }
 
